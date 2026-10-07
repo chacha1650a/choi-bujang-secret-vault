@@ -8,7 +8,7 @@
 2. 방어전 1단계 카드의 **Deploy** 버튼을 누릅니다. Vercel에 GitHub로 로그인하고, 새 저장소가 **본인 계정의 Public 저장소**인지 확인한 뒤 Deploy를 누릅니다.
 3. 배포가 끝나면 화면에 나온 `https://…vercel.app` 주소를 방어전 1단계 카드에 붙여넣고 제출합니다. 저장소 주소나 설정 파일은 적지 않습니다.
 
-배포가 끝나면 `/`에서 점령된 가상 자료실을 볼 수 있습니다. `/data.json`에는 같은 가상 메모가 공개됩니다. 이 공개 상태를 확인하는 것이 1단계의 출발점입니다. 1단계 접수와 심판 판정은 포털에서 확인합니다.
+배포가 끝나면 `/`에서 점령된 가상 자료실을 볼 수 있습니다. 1단계에서는 `/data.json`에 같은 가상 메모가 공개되어 있었습니다(2단계에서 옮김). 1단계 접수와 심판 판정은 포털에서 확인합니다.
 
 ## 시작 틀의 자동 처리
 
@@ -23,3 +23,32 @@
 [AGENTS.md](AGENTS.md)를 먼저 읽히고 한 번에 한 제작 단위만 요청하세요. 2단계부터는 자료 보호를 구현할 때 `public/data.json`을 복사하는 1단계 빌드 흐름도 함께 바꿔야 합니다. 3단계 이후의 로그인, 허용 경로, 5단계의 원본 API 주소, 6단계 이후 정책 규칙은 해당 단계 원고와 계약에 맞춰 추가합니다. 비밀번호·토큰·서버 전용 키·실제 학생 기록을 코드, Git, 제출 묶음에 넣지 않습니다.
 
 `src/decider.mjs`와 `src/detect.mjs`의 로컬 시험은 반 엔진이나 운영 심판의 결과가 아닙니다. 1단계 이후 제출 묶음 계약 `aleph.defense.submission.v2`는 `scripts/bundle.mjs`에 남아 있으며, 코딩 도구가 해당 단계의 최신 배포 주소와 Git 원격을 맞춘 뒤 사용합니다.
+
+## 2단계 기록: 자료를 코드 밖으로 옮깁니다
+
+현재 작동하는 기능:
+- 가상 메모 네 건은 학습용 Supabase 테이블 `public.notes`에 있습니다. 테이블은 RLS가 켜져 있고 `anon`·`authenticated`에는 권한이 없습니다. `owner_id uuid` 칸은 3단계 로그인 뒤 주인을 연결할 자리이고 외래키는 걸지 않았습니다.
+- 화면(`public/index.html`)은 서버 함수 `api/notes.js`를 통해 메모를 읽습니다. 함수는 Vercel 환경변수 `SUPABASE_URL`과 서버 전용 `SUPABASE_SECRET_KEY`만 읽고, 키를 응답·로그·브라우저 파일에 넣지 않습니다.
+- 저장소와 `public/`에는 메모 본문이 없습니다. 빌드(`scripts/build-public.mjs`)는 `public/data.json`을 만들지 않고 `public/aleph.json`만 기록합니다. `vercel.json`은 `X-Content-Type-Options: nosniff` 헤더를 붙입니다.
+
+다시 실행하는 방법:
+1. Supabase SQL Editor에서 `supabase/schema.sql`을 실행하고, 로컬 전용 시드(`supabase/seed.local.sql`, Git에 올리지 않음)로 가상 메모를 넣습니다.
+2. Vercel 프로젝트의 Environment Variables에 `SUPABASE_URL`, `SUPABASE_SECRET_KEY`를 직접 넣고 다시 배포합니다.
+3. 로컬 시험: `npm run test:r5`, 화면 빌드: `npm run build -- --local`.
+
+### 남은 약점 (해결됐다고 쓰지 않습니다)
+- `/api/notes`는 아직 로그인 없이 누구나 부를 수 있습니다. 3단계에서 로그인으로 막습니다. 그 전까지 가상 메모만 둡니다.
+- 1단계에서 이미 공개된 옛 커밋(`Initial commit`)과 옛 배포에는 메모 본문이 남아 있을 수 있습니다. 파일을 지워도 과거 노출이 해소된 것은 아닙니다. 이력을 지우려면 Git 이력 재작성과 옛 배포 삭제가 따로 필요합니다.
+
+### 확인 절차 (메모 문장 검색)
+```
+# 현재 GitHub 최신 파일에 가상 메모 문장이 없는지 (시드 파일은 Git에 올라가지 않음)
+git grep -nE "가상 .* 기록"
+# 배포된 공개 파일에서 메모가 사라졌는지
+curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
+curl -s https://<내 배포 주소>/aleph.json
+curl -sI https://<내 배포 주소>/ | grep -i x-content-type-options
+# 서버 API는 남은 약점으로 따로 기록
+curl -s https://<내 배포 주소>/api/notes
+```
+정상 결과: `git grep`은 결과 없음, `/data.json`은 404, `/aleph.json`은 열림, 헤더는 `nosniff`. `/api/notes`는 메모가 응답되며 이것이 남은 약점입니다.
