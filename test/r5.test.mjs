@@ -31,25 +31,26 @@ test('build identity uses Vercel Git and deployment metadata', () => {
   assert.throws(() => deploymentIdentity({ ...env, VERCEL_GIT_COMMIT_SHA: 'short' }, config));
 });
 
-test('stage 2 attack check reads data.json and the notes API without credentials', async () => {
+test('stage 3 attack check sends no token and a forged token', async () => {
   const originalFetch = globalThis.fetch;
-  const urls = [];
+  const seen = [];
   try {
-    globalThis.fetch = async (url) => {
-      urls.push(String(url));
+    globalThis.fetch = async (url, init) => {
+      seen.push([String(url), init?.headers?.authorization]);
       if (String(url).endsWith('/data.json')) return new Response('not found', { status: 404 });
-      return new Response(JSON.stringify({ notes: [{ title: 'a', content: 'b' }] }), { status: 200 });
+      return new Response(JSON.stringify({ error: 'UNAUTHENTICATED' }), { status: 401 });
     };
-    const results = await runAttackChecks({ ...config, step: 2 });
-    assert.deepEqual(urls, [
-      'https://student-defense.vercel.app/data.json',
-      'https://student-defense.vercel.app/api/notes',
+    const results = await runAttackChecks({ ...config, step: 3 });
+    assert.deepEqual(seen, [
+      ['https://student-defense.vercel.app/data.json', undefined],
+      ['https://student-defense.vercel.app/api/notes', undefined],
+      ['https://student-defense.vercel.app/api/notes', 'Bearer aaaa.bbbb.cccc'],
     ]);
-    assert.match(results[0].observed, /보이지 않음/u);
-    assert.match(results[1].observed, /응답됨/u);
-    globalThis.fetch = async () => new Response(JSON.stringify({ notes: [{ title: 'a' }] }), { status: 200 });
-    const [leak] = await runAttackChecks({ ...config, step: 2 });
-    assert.match(leak.observed, /메모가 보임/u);
+    assert.match(results[1].observed, /거부됨/u);
+    assert.match(results[2].observed, /거부됨/u);
+    globalThis.fetch = async () => new Response(JSON.stringify([{ id: 'x' }]), { status: 200 });
+    const open = await runAttackChecks({ ...config, step: 3 });
+    assert.match(open[1].observed, /거부되지 않음/u);
   } finally {
     globalThis.fetch = originalFetch;
   }

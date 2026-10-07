@@ -52,3 +52,34 @@ curl -sI https://<내 배포 주소>/ | grep -i x-content-type-options
 curl -s https://<내 배포 주소>/api/notes
 ```
 정상 결과: `git grep`은 결과 없음, `/data.json`은 404, `/aleph.json`은 열림, 헤더는 `nosniff`. `/api/notes`는 메모가 응답되며 이것이 남은 약점입니다.
+
+## 3단계 기록: 진짜 로그인을 붙입니다
+
+현재 작동하는 기능:
+- 화면(`public/index.html`)에서 Supabase Auth 이메일·비밀번호로 가입·로그인·로그아웃합니다. 브라우저 파일에는 공개용 키(publishable)만 있고 서버 전용 키는 없습니다. 로그인 실패 이유는 화면에 보여 줍니다.
+- 서버 함수(`api/notes.js`, `api/notes/[id].js`)는 요청의 `Authorization: Bearer` 토큰을 `src/verify-login.mjs`로 검사합니다. 토큰이 없거나 엉터리이거나 만료·위조·다른 서비스용이면 자료 없이 `401`과 JSON 오류(`{"error":"UNAUTHENTICATED"}`)를 돌려줍니다. 브라우저가 보낸 userId·role은 읽지 않습니다.
+- 로그인한 사용자는 가상 메모를 추가·조회·수정·삭제합니다. 메모는 `{id, title, body}` 모양이고 추가할 때 서버가 확인한 사용자 ID를 `owner_id`로 저장합니다.
+  - `GET /api/notes` 내 메모 목록, `POST /api/notes` 추가(`{id}` 반환, id가 없으면 서버가 UUID 생성)
+  - `GET`·`PUT`·`DELETE /api/notes/:id` (지운 뒤 GET은 404)
+- `aleph.config.json`의 `identityProvider`(발급자·대상·공개키 주소)와 `allowedRoutes`는 위 구현과 같습니다. 비밀 키는 들어 있지 않습니다.
+
+다시 실행하는 방법:
+1. 새 Supabase 프로젝트면 `supabase/schema.sql`을 실행합니다. 2단계 모양의 테이블이 이미 있으면 `supabase/migrate-step3.sql`을 한 번 실행합니다(`content`→`body`, `id`→UUID, `service_role` 권한).
+2. Vercel 환경변수 `SUPABASE_URL`, `SUPABASE_SECRET_KEY`(서버 전용)를 넣고 배포합니다.
+3. 로컬 시험: `npm run test:notes`, `npm run test:r5`.
+
+### 남은 약점 (해결됐다고 쓰지 않습니다)
+- 아직 소유자 검사를 하지 않습니다. 로그인한 B가 A 메모의 id를 알면 읽고 고치고 지울 수 있습니다. 4단계에서 고칩니다.
+- 로그인은 신원 확인일 뿐이어서 권한(누가 무엇을 할 수 있는지)은 따로 만들지 않았습니다.
+- 1단계에서 공개된 옛 커밋과 배포에는 메모가 남아 있을 수 있습니다.
+
+### 확인 절차
+```
+# 로그인 없이 목록 요청: 401과 JSON 오류가 와야 합니다
+curl -s -i https://<내 배포 주소>/api/notes
+# 엉터리 토큰: 역시 거부되어야 합니다
+curl -s -i -H "Authorization: Bearer aaaa.bbbb.cccc" https://<내 배포 주소>/api/notes
+# 공개 파일에 메모가 없어야 합니다
+curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
+```
+정상 로그인(A) 뒤에는 화면에서 메모를 추가·수정·삭제할 수 있어야 합니다.
