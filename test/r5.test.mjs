@@ -31,6 +31,26 @@ test('build identity uses Vercel Git and deployment metadata', () => {
   assert.throws(() => deploymentIdentity({ ...env, VERCEL_GIT_COMMIT_SHA: 'short' }, config));
 });
 
+test('stage 5 attack check also calls the original API with the public key only', async () => {
+  const originalFetch = globalThis.fetch;
+  const originalApiUrl = 'https://project.supabase.co/rest/v1/notes';
+  try {
+    globalThis.fetch = async (url) => (String(url).startsWith(originalApiUrl)
+      ? new Response(JSON.stringify([]), { status: 200 })
+      : new Response(JSON.stringify({ error: 'UNAUTHENTICATED' }), { status: 401 }));
+    const closed = await runAttackChecks({ ...config, step: 5, originalApiUrl });
+    assert.equal(closed.length, 4);
+    assert.match(closed[3].observed, /보이지 않음/u);
+    globalThis.fetch = async (url) => (String(url).startsWith(originalApiUrl)
+      ? new Response(JSON.stringify([{ id: 'x' }]), { status: 200 })
+      : new Response(JSON.stringify({ error: 'UNAUTHENTICATED' }), { status: 401 }));
+    const open = await runAttackChecks({ ...config, step: 5, originalApiUrl });
+    assert.match(open[3].observed, /메모가 보임/u);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('stage 4 attack check sends no token and a forged token', async () => {
   const originalFetch = globalThis.fetch;
   const seen = [];

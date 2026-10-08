@@ -103,3 +103,11 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 - 직접 Data API(`authenticated` 역할)의 접근은 RLS 정책으로 설계했지만, 심판이 재현할 수 없어 실제로 부르는 시험은 하지 않았습니다. 확인한 것은 권한 조회(`has_table_privilege`)뿐입니다.
 - 서버 함수는 서버 전용 키로 DB에 접속하므로 RLS를 건너뜁니다. 소유자 검사가 서버 코드 한 곳에 있어서 이 코드가 틀리면 다른 보호가 없습니다. 5단계에서 요청 경로를 한곳으로 모읍니다.
 - 1단계에서 공개된 옛 커밋과 배포에는 메모가 남아 있을 수 있습니다.
+
+## 5단계 기록: 자료 요청을 서버 한곳으로 모읍니다
+
+- 제작 1: 화면(`public/index.html`)은 메모를 `/api/notes`로만 읽고 쓰므로 Supabase 직접 호출은 없었습니다. Supabase 클라이언트는 로그인(Auth)에만 씁니다.
+- 제작 2: `supabase/rls-step5.sql`로 메모 테이블의 PUBLIC·anon·authenticated 직접 권한을 모두 회수하고, 서버 전용 키(service_role)만 남겼습니다. 적용 전후 권한은 같은 파일의 확인 쿼리로 봅니다.
+- `aleph.config.json`의 `originalApiUrl`에 쿼리 없는 원본 자료 주소(`/rest/v1/notes`)를 적었습니다. 공개 키만으로 불러도 메모가 나오면 안 됩니다.
+- `src/attack-check.mjs`에 5단계 점검(공개 키로 원본 API 직접 조회)을 더했습니다.
+- 남은 약점: 로그인용 공개 키가 화면 코드에 있습니다(가점 3은 로그인까지 서버로 옮겨야 해서 하지 않았습니다). 1단계에서 공개된 옛 커밋과 배포 이력에는 메모가 남아 있습니다.
