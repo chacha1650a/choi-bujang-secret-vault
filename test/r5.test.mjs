@@ -31,7 +31,7 @@ test('build identity uses Vercel Git and deployment metadata', () => {
   assert.throws(() => deploymentIdentity({ ...env, VERCEL_GIT_COMMIT_SHA: 'short' }, config));
 });
 
-test('stage 3 attack check sends no token and a forged token', async () => {
+test('stage 4 attack check sends no token and a forged token', async () => {
   const originalFetch = globalThis.fetch;
   const seen = [];
   try {
@@ -40,7 +40,7 @@ test('stage 3 attack check sends no token and a forged token', async () => {
       if (String(url).endsWith('/data.json')) return new Response('not found', { status: 404 });
       return new Response(JSON.stringify({ error: 'UNAUTHENTICATED' }), { status: 401 });
     };
-    const results = await runAttackChecks({ ...config, step: 3 });
+    const results = await runAttackChecks({ ...config, step: 4 });
     assert.deepEqual(seen, [
       ['https://student-defense.vercel.app/data.json', undefined],
       ['https://student-defense.vercel.app/api/notes', undefined],
@@ -49,7 +49,7 @@ test('stage 3 attack check sends no token and a forged token', async () => {
     assert.match(results[1].observed, /거부됨/u);
     assert.match(results[2].observed, /거부됨/u);
     globalThis.fetch = async () => new Response(JSON.stringify([{ id: 'x' }]), { status: 200 });
-    const open = await runAttackChecks({ ...config, step: 3 });
+    const open = await runAttackChecks({ ...config, step: 4 });
     assert.match(open[1].observed, /거부되지 않음/u);
   } finally {
     globalThis.fetch = originalFetch;

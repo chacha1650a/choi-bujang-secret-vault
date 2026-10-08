@@ -30,8 +30,8 @@ function checkText(value, label, max, { required }) {
 }
 
 // 서버가 확인한 로그인 정보(verifyLogin)만 믿습니다. 브라우저가 보낸 userId·role은 읽지 않습니다.
-// 3단계에서는 아직 소유자 검사를 하지 않습니다. 로그인한 누구나 id를 알면 다른 사람의 메모를
-// 읽고 고치고 지울 수 있습니다. 이 허점은 4단계에서 고칩니다.
+// 4단계: 모든 읽기·추가·수정·삭제는 서버가 검증한 사용자 ID와 DB의 owner_id가 같을 때만 허용합니다.
+// 요청 주소·본문의 userId·owner_id는 믿지 않습니다.
 export function createNotesApi({ verifyLogin, supabase }) {
   async function authenticate(request, response) {
     response.setHeader('Cache-Control', 'no-store');
@@ -91,18 +91,27 @@ export function createNotesApi({ verifyLogin, supabase }) {
   }
 
   async function item(request, response) {
-    await guarded(request, response, ['GET', 'PUT', 'DELETE'], async () => {
+    await guarded(request, response, ['GET', 'PUT', 'DELETE'], async (who) => {
       const id = String(request.query?.id ?? '');
       if (!UUID.test(id)) {
         send(response, 404, { error: 'NOT_FOUND' });
         return;
       }
+      // 4단계: 주소의 id는 믿지 않습니다. 먼저 DB의 owner_id를 읽어 검증된 사용자와 비교하고,
+      // 주인이 아니면(주인이 없는 옛 행 포함) 본문 없이 거부합니다. 기본은 거부입니다.
+      const existing = await supabase.from('notes').select('id, title, body, owner_id')
+        .eq('id', id).maybeSingle();
+      if (existing.error) throw existing.error;
+      if (!existing.data) {
+        send(response, 404, { error: 'NOT_FOUND' });
+        return;
+      }
+      if (existing.data.owner_id !== who.userId) {
+        send(response, 403, { error: 'FORBIDDEN', message: '내 메모만 접근할 수 있습니다.' });
+        return;
+      }
       if (request.method === 'GET') {
-        const { data, error } = await supabase.from('notes').select('id, title, body')
-          .eq('id', id).maybeSingle();
-        if (error) throw error;
-        if (!data) send(response, 404, { error: 'NOT_FOUND' });
-        else send(response, 200, publicNote(data));
+        send(response, 200, publicNote(existing.data));
         return;
       }
       if (request.method === 'PUT') {
@@ -115,18 +124,24 @@ export function createNotesApi({ verifyLogin, supabase }) {
           send(response, 400, { error: 'INVALID_REQUEST', message: problem });
           return;
         }
+        // 새 행의 주인이 본인이 아니게 되는 요청(소유자 변경)은 거부합니다. owner_id는 절대 쓰지 않습니다.
+        const requestedOwner = input.owner_id ?? input.ownerId;
+        if (requestedOwner !== undefined && requestedOwner !== who.userId) {
+          send(response, 403, { error: 'FORBIDDEN', message: '소유자는 바꿀 수 없습니다.' });
+          return;
+        }
         const changes = {};
         if (input.title !== undefined) changes.title = input.title;
         if (input.body !== undefined) changes.body = input.body;
         const { data, error } = await supabase.from('notes').update(changes)
-          .eq('id', id).select('id, title, body').maybeSingle();
+          .eq('id', id).eq('owner_id', who.userId).select('id, title, body').maybeSingle();
         if (error) throw error;
         if (!data) send(response, 404, { error: 'NOT_FOUND' });
         else send(response, 200, publicNote(data));
         return;
       }
       const { data, error } = await supabase.from('notes').delete()
-        .eq('id', id).select('id').maybeSingle();
+        .eq('id', id).eq('owner_id', who.userId).select('id').maybeSingle();
       if (error) throw error;
       if (!data) send(response, 404, { error: 'NOT_FOUND' });
       else response.status(204).end();

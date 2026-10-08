@@ -17,3 +17,16 @@ revoke all on table public.notes from anon, authenticated;
 
 -- "새 테이블 자동 공개"를 끈 프로젝트에서는 서버 전용 키(service_role)에도 권한이 자동으로 붙지 않습니다.
 grant select, insert, update, delete on table public.notes to service_role;
+
+-- 4단계: 본인 행만 접근하는 RLS 정책(자세한 설명과 확인 쿼리는 rls-step4.sql).
+revoke all on table public.notes from public;
+grant select, insert, update, delete on table public.notes to authenticated;
+
+create policy notes_select_own on public.notes for select to authenticated
+  using ((select auth.uid()) = owner_id);
+create policy notes_insert_own on public.notes for insert to authenticated
+  with check ((select auth.uid()) = owner_id);
+create policy notes_update_own on public.notes for update to authenticated
+  using ((select auth.uid()) = owner_id) with check ((select auth.uid()) = owner_id);
+create policy notes_delete_own on public.notes for delete to authenticated
+  using ((select auth.uid()) = owner_id);

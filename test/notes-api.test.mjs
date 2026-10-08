@@ -48,8 +48,12 @@ function call(handler, { method = 'GET', authorization, body, query } = {}) {
   });
 }
 
-const verifyLogin = async (authorization) => (authorization === 'Bearer good'
-  ? { kind: 'student', userId: A } : null);
+const B = '33333333-3333-4333-8333-333333333333';
+const verifyLogin = async (authorization) => {
+  if (authorization === 'Bearer good') return { kind: 'student', userId: A };
+  if (authorization === 'Bearer other') return { kind: 'student', userId: B };
+  return null;
+};
 
 test('로그인 토큰이 없거나 틀리면 JSON 오류와 401을 돌려준다', async () => {
   const api = createNotesApi({ verifyLogin, supabase: fakeSupabase([]) });
@@ -96,9 +100,47 @@ test('잘못된 입력은 400, 같은 id 중복은 409, 알 수 없는 메서드
   assert.equal((await call(api.collection, { ...headers, method: 'POST', body: { title: '', body: 'x' } })).status, 400);
   assert.equal((await call(api.collection, { ...headers, method: 'POST', body: { id: 'not-a-uuid', title: 't', body: 'b' } })).status, 400);
   assert.equal((await call(api.collection, { ...headers, method: 'POST', body: 'not json' })).status, 400);
-  assert.equal((await call(api.item, { ...headers, method: 'PUT', query: { id: NOTE }, body: {} })).status, 400);
+  assert.equal((await call(api.item, { ...headers, method: 'PUT', query: { id: NOTE }, body: { title: 'x' } })).status, 404);
   await call(api.collection, { ...headers, method: 'POST', body: { id: NOTE, title: 't', body: 'b' } });
+  assert.equal((await call(api.item, { ...headers, method: 'PUT', query: { id: NOTE }, body: {} })).status, 400);
   assert.equal((await call(api.collection, { ...headers, method: 'POST', body: { id: NOTE, title: 't', body: 'b' } })).status, 409);
   assert.equal((await call(api.collection, { ...headers, method: 'PATCH' })).status, 405);
   assert.equal((await call(api.item, { ...headers, query: { id: 'zzz' } })).status, 404);
+});
+
+test('4단계: B는 A의 메모를 읽거나 고치거나 지우거나 소유자를 바꿀 수 없다', async () => {
+  const rows = [
+    { id: NOTE, owner_id: A, title: 'A의 메모', body: 'A만 봅니다', created_at: 1 },
+    { id: '44444444-4444-4444-8444-444444444444', owner_id: null, title: '주인 없음', body: '옛 행', created_at: 0 },
+  ];
+  const api = createNotesApi({ verifyLogin, supabase: fakeSupabase(rows) });
+  const b = { authorization: 'Bearer other' };
+
+  const read = await call(api.item, { ...b, query: { id: NOTE } });
+  assert.equal(read.status, 403);
+  assert.equal(JSON.stringify(read.body).includes('A만 봅니다'), false);
+  assert.equal((await call(api.item, { ...b, method: 'PUT', query: { id: NOTE }, body: { title: '탈취' } })).status, 403);
+  assert.equal((await call(api.item, { ...b, method: 'DELETE', query: { id: NOTE } })).status, 403);
+  assert.equal(rows[0].title, 'A의 메모');
+  assert.equal(rows[0].owner_id, A);
+  // 주인이 없는 옛 행은 누구도 접근하지 못한다.
+  assert.equal((await call(api.item, { ...b, query: { id: rows[1].id } })).status, 403);
+  assert.equal((await call(api.item, { authorization: 'Bearer good', query: { id: rows[1].id } })).status, 403);
+  // B의 목록에는 A의 메모가 없다.
+  assert.deepEqual((await call(api.collection, b)).body, []);
+
+  // A 자신은 계속 읽고 고칠 수 있지만, 소유자를 B로 바꾸는 요청은 거부된다.
+  const a = { authorization: 'Bearer good' };
+  assert.equal((await call(api.item, { ...a, query: { id: NOTE } })).status, 200);
+  assert.equal((await call(api.item, { ...a, method: 'PUT', query: { id: NOTE }, body: { title: '새 제목', owner_id: B } })).status, 403);
+  assert.equal(rows[0].owner_id, A);
+  assert.equal((await call(api.item, { ...a, method: 'PUT', query: { id: NOTE }, body: { title: '새 제목', owner_id: A } })).status, 200);
+
+  // 추가할 때 본문의 owner_id는 무시하고 검증된 ID로 저장한다.
+  const created = await call(api.collection, { ...b, method: 'POST', body: { title: 'B', body: '내용', owner_id: A } });
+  assert.equal(created.status, 201);
+  assert.equal(rows.find((row) => row.id === created.body.id).owner_id, B);
+
+  // A만 자기 메모를 지울 수 있다.
+  assert.equal((await call(api.item, { ...a, method: 'DELETE', query: { id: NOTE } })).status, 204);
 });
