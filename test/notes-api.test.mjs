@@ -79,8 +79,10 @@ test('로그인한 사용자는 메모를 추가·조회·수정·삭제하고 �
   const generated = await call(api.collection, { ...headers, method: 'POST', body: { title: 't', body: 'b' } });
   assert.match(generated.body.id, /^[0-9a-f-]{36}$/u);
 
-  const list = await call(api.collection, headers);
+  const list = await call(api.mine, headers);
   assert.equal(list.status, 200);
+  assert.deepEqual((await call(api.collection, headers)).body, list.body);
+  assert.equal((await call(api.mine, { ...headers, method: 'POST', body: {} })).status, 405);
   assert.deepEqual(list.body.map((note) => note.id).sort(), [NOTE, generated.body.id].sort());
   assert.deepEqual(Object.keys(list.body[0]).sort(), ['body', 'id', 'title']);
 

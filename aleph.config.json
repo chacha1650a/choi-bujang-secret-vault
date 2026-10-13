@@ -10,14 +10,54 @@
     "jwksUrl": "https://qnhghbipylyhzoyhkkgl.supabase.co/auth/v1/.well-known/jwks.json"
   },
   "allowedRoutes": [
-    "GET /api/notes",
-    "POST /api/notes",
-    "GET /api/notes/:id",
-    "PUT /api/notes/:id",
-    "DELETE /api/notes/:id",
-    "GET /api/notices",
-    "GET /api/notices/:id",
-    "PUT /api/notices/:id"
+    {
+      "service": "notes",
+      "method": "GET",
+      "pathPattern": "/api/my/notes",
+      "zone": "my-notes"
+    },
+    {
+      "service": "notes",
+      "method": "POST",
+      "pathPattern": "/api/notes",
+      "zone": "my-notes"
+    },
+    {
+      "service": "notes",
+      "method": "GET",
+      "pathPattern": "/api/notes/:id",
+      "zone": "my-notes"
+    },
+    {
+      "service": "notes",
+      "method": "PUT",
+      "pathPattern": "/api/notes/:id",
+      "zone": "my-notes"
+    },
+    {
+      "service": "notes",
+      "method": "DELETE",
+      "pathPattern": "/api/notes/:id",
+      "zone": "my-notes"
+    },
+    {
+      "service": "notices",
+      "method": "GET",
+      "pathPattern": "/api/notices",
+      "zone": "instructor-notices"
+    },
+    {
+      "service": "notices",
+      "method": "GET",
+      "pathPattern": "/api/notices/:id",
+      "zone": "instructor-notices"
+    },
+    {
+      "service": "notices",
+      "method": "PUT",
+      "pathPattern": "/api/notices/:id",
+      "zone": "instructor-notices"
+    }
   ],
   "originalApiUrl": "https://qnhghbipylyhzoyhkkgl.supabase.co/rest/v1/notes",
   "restoreRoute": null

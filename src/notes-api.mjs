@@ -73,16 +73,27 @@ function createGuard(verifyLogin) {
 export function createNotesApi({ verifyLogin, supabase }) {
   const guarded = createGuard(verifyLogin);
 
+  async function listMine(who, response) {
+    response.setHeader('X-Resource-Id', resourceId('notes', 'mine'));
+    const { data, error } = await supabase.from('notes').select('id, title, body')
+      .eq('owner_id', who.userId).order('created_at');
+    if (error) throw error;
+    send(response, 200, data.map(publicNote));
+  }
+
+  // 8단계: 내 메모 목록 전용 경로(GET /api/my/notes). 이름 그대로 로그인한 본인의 메모만 돌려줍니다.
+  async function mine(request, response) {
+    await guarded(request, response, ['GET'], async (who) => listMine(who, response));
+  }
+
   async function collection(request, response) {
     await guarded(request, response, ['GET', 'POST'], async (who) => {
-      response.setHeader('X-Resource-Id', resourceId('notes', 'mine'));
+      // 옛 주소 호환: GET /api/notes도 본인 메모만 돌려줍니다. 화면은 /api/my/notes를 씁니다.
       if (request.method === 'GET') {
-        const { data, error } = await supabase.from('notes').select('id, title, body')
-          .eq('owner_id', who.userId).order('created_at');
-        if (error) throw error;
-        send(response, 200, data.map(publicNote));
+        await listMine(who, response);
         return;
       }
+      response.setHeader('X-Resource-Id', resourceId('notes', 'mine'));
       const input = readBody(request);
       const problem = !input ? '요청 본문은 JSON 객체여야 합니다.'
         : checkText(input.title, 'title', MAX_TITLE, { required: true })
@@ -163,7 +174,7 @@ export function createNotesApi({ verifyLogin, supabase }) {
     });
   }
 
-  return { collection, item };
+  return { collection, item, mine };
 }
 
 // 8단계: 강사 공지 구역. 읽기와 수정 모두 DB의 강사 명단에 있는 학생 계정만 합니다. 일반 학생에게는 다른 구역입니다.

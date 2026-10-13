@@ -132,9 +132,10 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 
 - 제작 1: 메모와 강사 공지를 서로 다른 자원 ID로 구분합니다. 응답 헤더 `X-Resource-Id`에 `note:<id>`·`notes:mine`(메모), `notice:<id>`·`notices:class`(공지)가 붙습니다. 기존 메모 주소와 자료는 그대로이고 화면 메뉴는 바꾸지 않았습니다.
 - 공지 구역: `GET /api/notices`, `GET·PUT /api/notices/:id`(서버 함수 `api/notices.js`, `api/notices/[id].js`). DB는 `supabase/step8-notices.sql`로 `notices`(가상 공지 1건)와 `instructors`(강사 명단, 비어 있음)를 만들고, 두 테이블 모두 브라우저 역할 권한 없이 서버 전용 키만 씁니다.
-- 제작 2: 판정기에 `resource_zone` 규칙을 넣었습니다. 엔진이 확인한 사용자(`subjectId`)·기기(`deviceId`)·메서드·정확한 경로가 서비스(`notes`)가 내 메모 구역 표(메모 5개 경로)와 맞을 때만 다음 규칙으로 넘어가고, 표에 없는 경로·메서드와 경로 모양이 다른 요청, 다른 서비스, 쿼리가 붙은 요청은 `resource_zone_denied`로 거부합니다. 강사 공지 구역(`/notices`)은 강사 역할이 판정 계약에 없어서 판정기에서는 읽기·수정 모두 허용하지 않습니다. 기존 기기·추가 확인 규칙은 그대로입니다.
+- 제작 2: 판정기에 `resource_zone` 규칙을 넣었습니다. 엔진이 확인한 사용자(`subjectId`)·기기(`deviceId`)·서비스(`notes`)·메서드·정확한 경로가 내 메모 구역(`my-notes`) 표와 맞을 때만 다음 규칙으로 넘어갑니다. 표: `GET /api/my/notes`(본인 목록), `POST /api/notes`, `GET·PUT·DELETE /api/notes/:id`. 전체 목록 모양(`GET /api/notes`, `/api/notes/all`, `/api/admin/notes`), 표에 없는 경로·메서드, 경로 모양이 다른 요청, 다른 서비스, 쿼리가 붙은 요청은 `route_not_allowed`로 거부합니다. 강사 공지 구역(`/notices`)은 강사 역할이 판정 계약에 없어서 판정기에서는 읽기·수정 모두 허용하지 않습니다. 기존 기기·추가 확인 규칙은 그대로입니다.
 - 제작 3: 자료 API가 다시 확인합니다. 메모는 DB 소유자와 검증된 사용자가 다르면 403(`reason: not_owner`), 공지 구역은 읽기·수정 모두 검증된 학생 계정이 DB 강사 명단에 있을 때만 허용하고 아니면 403(`reason: instructor_only`)입니다. 화면 메뉴·요청 본문·토큰의 role은 믿지 않고, 심판 시험 신원은 강사가 될 수 없습니다.
 - 확인 순서: `npm run test:decider`(구역 허용·거부), `npm run test:notes`(학생·심판의 공지 읽기·수정 거부, 강사 명단 계정만 공지 읽기·수정, B의 A 메모 거부). 토큰 없이 `/api/notices`를 부르면 401입니다.
 - 첫 제출 판정(36점, `S08_OTHER_ZONE_ALLOWED`): 일반 학생이 강사 공지 구역을 읽을 수 있었습니다. 공지 구역을 판정기와 API 모두에서 강사 전용으로 좁혔습니다.
 - 두 번째 판정도 같은 코드로 실패해서, `:id` 자리에 `export`·`all`·`shared` 같은 기능 이름이 오면 자료 ID로 보지 않고 거부하도록 판정기를 좁혔습니다.
+- 세 번째 판정도 같은 코드로 실패했습니다. 판정기가 `GET /api/notes`(전체 메모 목록 모양)를 내 메모 목록으로 허용한 것이 원인으로 보여, 본인 목록 전용 경로 `GET /api/my/notes`(서버 함수 `api/my/notes.js`)를 만들고 화면도 이 주소를 쓰게 바꿨습니다. `GET /api/notes`는 판정기에서 거부하고, 자료 API는 호환을 위해 본인 메모만 돌려줍니다. `aleph.config.json`의 `allowedRoutes`는 경로마다 서비스·메서드·경로·구역을 적은 객체로 바꿨습니다.
 - 남은 약점: 강사 명단은 SQL Editor로만 관리합니다. 판정기와 자료 API의 경로 표를 두 곳에서 맞춰야 합니다. 기능 이름 목록은 고정값입니다.

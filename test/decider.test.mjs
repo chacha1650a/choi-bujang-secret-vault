@@ -67,16 +67,22 @@ test('7단계: 최근에 다시 로그인했을 때만 이상 접속을 허용�
   assert.equal(unregistered.decision, 'deny');
 });
 
-test('8단계: 내 메모 구역 경로만 허용하고, 공지 구역·다른 서비스·다른 경로·쿼리는 거부한다', async () => {
+test('8단계: 내 메모 구역 경로만 허용하고, 전체 목록·공지 구역·다른 서비스·다른 경로·쿼리는 거부한다', async () => {
   const allowed = [
     { method: 'GET', path: '/notes/demo', route: 'GET /notes/:id' },
     { method: 'PUT', path: '/notes/demo', route: 'PUT /notes/:id' },
-    { method: 'GET', path: '/api/notes', route: 'GET /api/notes' },
+    { method: 'GET', path: '/api/my/notes', route: 'GET /api/my/notes' },
+    { method: 'GET', path: '/my/notes', route: 'GET /my/notes' },
+    { method: 'POST', path: '/api/notes', route: 'POST /api/notes' },
   ];
   for (const changes of allowed) {
     assert.equal((await decide(variant(normal, changes))).decision, 'allow', JSON.stringify(changes));
   }
   const denied = [
+    { method: 'GET', path: '/api/notes', route: 'GET /api/notes' },
+    { method: 'GET', path: '/notes', route: 'GET /notes' },
+    { method: 'GET', path: '/api/notes/all', route: 'GET /api/notes/all' },
+    { method: 'GET', path: '/api/admin/notes', route: 'GET /api/admin/notes' },
     { method: 'GET', path: '/notices', route: 'GET /notices' },
     { method: 'GET', path: '/notices/n1', route: 'GET /notices/:id' },
     { method: 'PUT', path: '/notices/n1', route: 'PUT /notices/:id' },
@@ -97,6 +103,6 @@ test('8단계: 내 메모 구역 경로만 허용하고, 공지 구역·다른 �
   for (const changes of denied) {
     const out = await decide(variant(normal, changes));
     assert.equal(out.decision, 'deny', JSON.stringify(changes));
-    assert.equal(out.reasonCode, 'resource_zone_denied');
+    assert.equal(out.reasonCode, 'route_not_allowed');
   }
 });

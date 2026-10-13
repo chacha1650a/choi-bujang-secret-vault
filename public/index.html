@@ -93,7 +93,7 @@
     }
 
     async function loadNotes() {
-      const notes = await api('/api/notes');
+      const notes = await api('/api/my/notes');
       const items = notes.map((note) => {
         const li = document.createElement('li');
         li.className = 'card';
