@@ -457,6 +457,128 @@
       "reasons": [
         "임시 폴더 실행 파일을 가리키는 서비스·예약 작업 · Wazuh 수준 12"
       ]
+    },
+    {
+      "id": "xdr_block.privilege.203.0.113.11",
+      "moduleKey": "privilege",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "203.0.113.11",
+      "createdAt": "2026-10-13T07:04:32.560Z",
+      "expiresAt": "2026-10-13T08:04:32.560Z",
+      "evidenceAlertIds": [
+        "pv-01",
+        "pv-02"
+      ],
+      "reasons": [
+        "관리자 그룹 추가 · Wazuh 수준 12",
+        "낯선 주소·시간·계정의 관리자 명령 · Wazuh 수준 12"
+      ]
+    },
+    {
+      "id": "xdr_block.privilege.198.51.100.11",
+      "moduleKey": "privilege",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "198.51.100.11",
+      "createdAt": "2026-10-13T07:04:32.560Z",
+      "expiresAt": "2026-10-13T08:04:32.560Z",
+      "evidenceAlertIds": [
+        "pv-03"
+      ],
+      "reasons": [
+        "낯선 주소·시간·계정의 관리자 명령 · Wazuh 수준 11"
+      ]
+    },
+    {
+      "id": "xdr_block.privilege.192.0.2.11",
+      "moduleKey": "privilege",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "192.0.2.11",
+      "createdAt": "2026-10-13T07:04:32.560Z",
+      "expiresAt": "2026-10-13T08:04:32.560Z",
+      "evidenceAlertIds": [
+        "pv-04"
+      ],
+      "reasons": [
+        "관리자 그룹 추가 · Wazuh 수준 12"
+      ]
+    },
+    {
+      "id": "xdr_block.privilege.203.0.113.17",
+      "moduleKey": "privilege",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "203.0.113.17",
+      "createdAt": "2026-10-13T07:04:32.560Z",
+      "expiresAt": "2026-10-13T08:04:32.560Z",
+      "evidenceAlertIds": [
+        "pv-05"
+      ],
+      "reasons": [
+        "관리자 그룹 추가 · Wazuh 수준 10"
+      ]
+    },
+    {
+      "id": "xdr_block.privilege.198.51.100.17",
+      "moduleKey": "privilege",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "198.51.100.17",
+      "createdAt": "2026-10-13T07:04:32.560Z",
+      "expiresAt": "2026-10-13T08:04:32.560Z",
+      "evidenceAlertIds": [
+        "pv-06"
+      ],
+      "reasons": [
+        "낯선 주소·시간·계정의 관리자 명령 · Wazuh 수준 12"
+      ]
+    },
+    {
+      "id": "xdr_block.privilege.192.0.2.17",
+      "moduleKey": "privilege",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "192.0.2.17",
+      "createdAt": "2026-10-13T07:04:32.560Z",
+      "expiresAt": "2026-10-13T08:04:32.560Z",
+      "evidenceAlertIds": [
+        "pv-07"
+      ],
+      "reasons": [
+        "관리자 그룹 추가 · Wazuh 수준 11"
+      ]
+    },
+    {
+      "id": "xdr_block.privilege.203.0.113.27",
+      "moduleKey": "privilege",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "203.0.113.27",
+      "createdAt": "2026-10-13T07:04:32.560Z",
+      "expiresAt": "2026-10-13T08:04:32.560Z",
+      "evidenceAlertIds": [
+        "pv-08"
+      ],
+      "reasons": [
+        "낯선 주소·시간·계정의 관리자 명령 · Wazuh 수준 12"
+      ]
+    },
+    {
+      "id": "xdr_block.privilege.198.51.100.27",
+      "moduleKey": "privilege",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "198.51.100.27",
+      "createdAt": "2026-10-13T07:04:32.560Z",
+      "expiresAt": "2026-10-13T08:04:32.560Z",
+      "evidenceAlertIds": [
+        "pv-09"
+      ],
+      "reasons": [
+        "관리자 그룹 추가 · Wazuh 수준 10"
+      ]
     }
   ]
 }

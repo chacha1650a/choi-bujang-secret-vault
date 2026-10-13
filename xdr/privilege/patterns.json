@@ -1,0 +1,56 @@
+{
+  "schema": "aleph.xdr.patterns.v1",
+  "moduleKey": "privilege",
+  "mitre": ["T1068", "T1078"],
+  "patterns": [
+    {
+      "id": "pv-admin-group-add",
+      "name": "관리자 그룹 추가",
+      "tier": "strong",
+      "condition": "평범한 계정이 관리자 그룹(administrators·admins·sudo·wheel 등)에 추가됨",
+      "evidence": "MITRE ATT&CK T1078 Valid Accounts·T1098 Account Manipulation: 정상 계정에 관리자 권한을 붙여 오래 쓰려는 공격",
+      "when": { "field": "data.group", "regex": "^(administrators|admins?|domain admins|enterprise admins|sudo|sudoers|wheel|root)$" }
+    },
+    {
+      "id": "pv-admin-command-unusual",
+      "name": "낯선 주소·시간·계정의 관리자 명령",
+      "tier": "strong",
+      "condition": "관리자 명령·권한 사용이 처음 보는 주소, 수업·업무 시간 밖, 다른 계정의 권한, 방금 얻은 권한과 함께 나타남",
+      "evidence": "MITRE ATT&CK T1068 Exploitation for Privilege Escalation·T1078 Valid Accounts: 가로챈 권한으로 평소와 다른 관리자 작업을 하는 공격",
+      "when": { "all": [
+        { "field": "rule.description", "regex": "관리자 (명령|권한)" },
+        { "field": "rule.description", "regex": "처음 (보|봅|본)|(수업|업무) 시간 밖|업무처럼 보이지 않는|다른 계정|방금 관리자가 된|곧바로" }
+      ] }
+    },
+    {
+      "id": "pv-elevation-once",
+      "name": "권한 상승·관리자 명령 한 번",
+      "tier": "medium",
+      "condition": "권한 상승 창·관리자 명령이 평소 주소에서 한 번 있거나 실패·취소됨",
+      "evidence": "MITRE ATT&CK T1068 Exploitation for Privilege Escalation: 한 번의 권한 상승은 수업 작업일 수 있어 사람이 확인해야 함",
+      "when": { "field": "rule.description", "regex": "권한 상승|관리자 명령|관리자 권한" }
+    },
+    {
+      "id": "pv-group-change",
+      "name": "관리자 아닌 그룹 추가·변경",
+      "tier": "medium",
+      "condition": "관리자 그룹이 아닌 그룹에 추가되거나 새 그룹이 만들어짐",
+      "evidence": "MITRE ATT&CK T1078 Valid Accounts·T1098 Account Manipulation: 그룹 변경은 권한 확대의 앞 단계일 수 있어 확인이 필요함",
+      "when": { "any": [
+        { "field": "data.group", "exists": true },
+        { "field": "rule.description", "regex": "그룹" }
+      ] }
+    },
+    {
+      "id": "pv-wazuh-level",
+      "name": "Wazuh 권한 경보 등급",
+      "tier": "weak",
+      "condition": "Wazuh 규칙 수준 5 이상이고 rule.mitre 에 T1068 또는 T1078 이 붙음",
+      "evidence": "Wazuh 규칙 수준(rule.level)과 MITRE ATT&CK T1068·T1078 표시: 경보 원천이 권한 상승·계정 도용 시도로 분류한 사건",
+      "when": { "all": [
+        { "field": "rule.level", "gte": 5 },
+        { "field": "rule.mitre", "includesAny": ["T1068", "T1078"] }
+      ] }
+    }
+  ]
+}
