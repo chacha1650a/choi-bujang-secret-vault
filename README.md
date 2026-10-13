@@ -246,7 +246,7 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 
 ### 실측 결과 (`npm run bundle` → `npm run checks:table`, 실제 배포에 보낸 요청)
 
-점검 시각 2026-10-13T06:02:24.907Z · 커밋 05eb350fa2e1 · 단계 12
+점검 시각 2026-10-13T06:14:31.358Z · 커밋 8063439edd0a · 단계 12
 
 | 단계 | 점검 | 기대 | 실제 응답(observed) | 결과 |
 |---|---|---|---|---|
