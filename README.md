@@ -215,3 +215,41 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 | 화면 출력(XSS) | 메모·상태 문구는 모두 `textContent`로 넣음, `innerHTML` 없음 | 없음 |
 | 오류 응답 | 내부 오류 내용·키를 내보내지 않고 `SERVER_ERROR`만 응답 | 없음 |
 | DB 직접 접근 | 공개 키로 `notes`·`note_snapshots`·`audit_log`·`device_registrations` 모두 거부 | 없음 |
+
+## 12단계 기록: 탈환 작전실을 완성합니다
+
+### 무엇을 누가 만들었나
+
+| 출처 | 들어 있는 것 |
+|---|---|
+| 학생이 만든 것(이 저장소) | 판정기 `src/decider.mjs`, 탐지 규칙 `src/detect.mjs`, 자료실 서버 함수 `api/`(메모·공지·복원·기기 승인·점검), 접속 앱 화면 `public/`(manifest·서비스 워커·작전실), 정책 사본 도구 `scripts/policy.mjs`, 자기 점검 `src/attack-check.mjs`·`src/rule-check.mjs`, DB 설정 `supabase/*.sql` |
+| 제공 엔진 | **ALEPH SDP 엔진 사용**. 로그인 세션 확인, 기기 등록·요청 서명(mTLS 릴레이), 판정기 호출과 집행, 회수 집행은 엔진이 맡습니다. 이 저장소에는 엔진 코드가 없습니다. |
+| 외부 서비스 | Supabase(Auth·DB), Vercel(배포·서버 함수) |
+
+### 제작 1: 탈환 작전실 화면
+
+첫 화면 아래 「탈환 작전실」에서 「점검 실행」을 누르면 다음을 한 표로 보여 줍니다. 결과는 응답 상태로만 정하고, 보내지 못한 시험은 「미실행」으로 둡니다. 메모 본문·토큰은 표시하지 않습니다(정상 조회는 건수만).
+- **금지 요청(실제 전송):** `/data.json`, 토큰 없음·엉터리 토큰·쿼리 신원으로 `/api/my/notes`, 공개 키로 원본 `/rest/v1/notes`, `/api/notices`, `POST /api/restore/:id`, 서명·승인 없는 `PUT /api/notes/:id`.
+- **판정기 규칙·탐지 사건·복구 버전:** 서버 `GET /api/checks`가 고정된 가상 입력 11건(6~10단계 정상·금지)을 지금 실행한 결과. 판정(`allow`/`deny`/`step_up`), 탐지(`propose_revocation`/`observe`), 정책 사본 버전.
+- **회수 상태·정상 요청:** 로그인했으면 이 기기의 승인 상태(`approved`/`approval_pending`/`device_revoked`)를, 승인된 기기면 내 메모 조회(건수만)를 실제로 보냅니다. 아니면 미실행.
+- 각 줄에 요청 ID(이 화면이 만든 UUID)와 확인 시각이 붙습니다. 화면의 수치는 표의 줄 수를 그대로 센 값입니다.
+
+### 제작 2: 1~11단계 정상·금지 요청 실측 표 만드는 절차
+
+1. 검사할 커밋을 배포한 뒤, 커밋하지 않는 `bundle-notes.json`에 이번에 한 일을 적습니다.
+2. `npm run bundle` → `src/attack-check.mjs`가 실제 배포에 요청을 보내 `artifacts/submission.json`의 `attackAttempts`(단계·점검·기대·실제 응답·요청 ID·결과 `blocked`/`breached`/`not_run`)와 `checkedAt`을 남깁니다.
+3. `npm run checks:table` → 그 결과를 고치지 않고 표로 출력합니다. 보내지 못한 점검은 미실행으로 남습니다.
+4. 로그인이 필요한 정상 요청(내 메모 조회, 기기 승인 상태)은 묶음에서 보내지 않으므로(토큰을 다루지 않음) 작전실 화면에서 로그인·승인 기기로 실행해 확인합니다.
+5. 41종 공격 전체는 심판이 보내는 것이라 이 저장소에서 실행하지 않았습니다. 아래 표에 없는 공격을 통과로 적지 않습니다.
+
+### 제작 3: 설치·실행·중지·복구 (검사한 커밋 기준)
+
+검사한 커밋은 `npm run bundle` 결과의 `commit` 값입니다. 비밀값(서버 전용 키 등)은 저장소와 이 안내에 넣지 않습니다.
+
+1. **설치:** `git clone https://github.com/chacha1650a/choi-bujang-secret-vault && cd choi-bujang-secret-vault && git checkout <검사한 커밋> && npm ci` (Node.js 22 이상).
+2. **DB 준비(Supabase SQL Editor, 순서대로):** `supabase/schema.sql` → `migrate-step3.sql` → `rls-step4.sql` → `rls-step5.sql` → `step8-notices.sql` → `step10-backup.sql` → `step11-devices.sql`. 이메일이 들어가는 시험 계정 SQL은 저장소에 없습니다(로컬 전용).
+3. **실행:** Vercel 새 프로젝트에 이 저장소를 연결하고 환경변수 이름 `SUPABASE_URL`, `SUPABASE_SECRET_KEY`의 값은 Vercel 비밀 입력란에만 넣은 뒤 배포합니다(`vercel.json`: 빌드 `npm run build`, 공개 폴더 `public`). 로컬 확인: `npm run test:notes`·`test:restore`·`test:device`·`test:decider`·`test:detect`·`test:checks`·`test:r5`, `npm run decider:test`, `npm run detect:test`, `npm run policy:diff`.
+4. **판정기·탐지 규칙:** 엔진(ALEPH SDP 엔진)이 `src/decider.mjs`의 `decide(request)`와 `src/detect.mjs`의 `detect(events)`를 부릅니다. 가상 입력 확인은 `GET /api/checks`.
+5. **접속 앱:** 배포 주소를 열어 로그인 → 「이 기기 승인 요청」 → 강사가 `supabase/step11-devices.sql`의 안내대로 그 한 건만 승인 → 「승인 상태 다시 확인」.
+6. **중지:** Vercel 프로젝트에서 배포를 내리거나(Instant Rollback·일시 중지), 기기 승인을 `revoked`로 바꿉니다. 엔진 쪽 경로 허용을 끄는 일은 엔진 몫입니다.
+7. **복구:** 검사한 커밋으로 되돌려 다시 배포합니다(`git checkout <검사한 커밋>` 뒤 재배포). 정책은 `npm run policy:diff` → `npm run policy:restore -- --apply`, 메모 한 건은 `POST /api/restore/:noteId`(미리 보기 → `{ "confirm": true }`). 복구 뒤에는 위 「제작 2」 절차로 다시 실측합니다.

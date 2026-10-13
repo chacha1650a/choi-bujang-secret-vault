@@ -18,7 +18,9 @@
     "policy:diff": "node scripts/policy.mjs diff",
     "policy:restore": "node scripts/policy.mjs restore",
     "test:restore": "node --test test/restore-api.test.mjs test/policy.test.mjs",
-    "test:device": "node --test test/device-api.test.mjs"
+    "test:device": "node --test test/device-api.test.mjs",
+    "test:checks": "node --test test/checks.test.mjs",
+    "checks:table": "node scripts/checks-table.mjs"
   },
   "engines": {
     "node": ">=22"

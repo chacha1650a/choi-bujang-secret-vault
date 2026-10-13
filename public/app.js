@@ -139,6 +139,114 @@ $('editor').addEventListener('submit', async (event) => {
   } catch (error) { say(error.message); }
 });
 
+// 12단계 탈환 작전실: 이 화면이 지금 실제로 보낸 요청의 응답과 서버의 고정 가상 입력 점검 결과만 보여 줍니다.
+// 결과는 응답 상태로만 정하고, 보내지 못한 시험은 미실행으로 둡니다. 메모 본문·토큰은 표에 넣지 않습니다.
+const TEST_UUID = '00000000-0000-4000-8000-000000000001';
+const FAKE_TOKEN = 'Bearer aaaa.bbbb.cccc';
+const hasNoteData = (text) => /"(title|body|content)"\s*:/u.test(text);
+
+async function observe(path, { method = 'GET', headers = {}, body } = {}) {
+  const requestId = crypto.randomUUID();
+  try {
+    const response = await fetch(path, {
+      method, cache: 'no-store', credentials: 'same-origin', redirect: 'manual',
+      headers: { accept: 'application/json', ...(body ? { 'content-type': 'application/json' } : {}), ...headers },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const text = await response.text();
+    let json;
+    try { json = JSON.parse(text); } catch { json = undefined; }
+    return { ran: true, requestId, at: new Date().toISOString(), status: response.status, json, leaked: hasNoteData(text) };
+  } catch {
+    return { ran: false, requestId, at: new Date().toISOString() };
+  }
+}
+
+const refusedJson = (r) => [401, 403].includes(r.status) && typeof r.json?.error === 'string' && !r.leaked;
+
+function row(stage, kind, request, expected, r, okWhen) {
+  if (!r.ran) return { stage, kind, request, expected, actual: '요청을 보내지 못함', verdict: 'skip', requestId: r.requestId, at: r.at };
+  const detail = r.json && typeof r.json === 'object' && !Array.isArray(r.json)
+    ? ['error', 'reason', 'approved', 'ready'].filter((k) => k in r.json).map((k) => `${k}=${r.json[k]}`).join(' ') : '';
+  return { stage, kind, request, expected, actual: `HTTP ${r.status}${detail ? ` · ${detail}` : ''}`,
+    verdict: okWhen(r) ? 'ok' : 'bad', requestId: r.requestId, at: r.at };
+}
+
+const skipped = (stage, kind, request, expected, why) => ({ stage, kind, request, expected, actual: why, verdict: 'skip', requestId: '-', at: '-' });
+
+async function runOps() {
+  $('ops-run').disabled = true;
+  $('ops-meta').textContent = '점검 중입니다.';
+  const rows = [];
+  // 금지 요청: 이 화면에서 실제로 보냅니다.
+  rows.push(row(1, '금지', 'GET /data.json', '메모 없음(404)', await observe('/data.json'), (r) => r.status === 404 && !r.leaked));
+  rows.push(row(3, '금지', 'GET /api/my/notes (토큰 없음)', '401 JSON', await observe('/api/my/notes'), refusedJson));
+  rows.push(row(3, '금지', 'GET /api/my/notes (엉터리 토큰)', '401 JSON', await observe('/api/my/notes', { headers: { authorization: FAKE_TOKEN } }), refusedJson));
+  rows.push(row(4, '금지', 'GET /api/my/notes?userId=…&role=instructor', '쿼리 신원 무시, 401', await observe(`/api/my/notes?userId=${TEST_UUID}&role=instructor`), refusedJson));
+  rows.push(row(5, '금지', '공개 키로 원본 /rest/v1/notes', '권한 오류, 메모 없음',
+    await observe(`${SUPABASE_URL}/rest/v1/notes?select=id&limit=1`, { headers: { apikey: SUPABASE_PUBLISHABLE_KEY, authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}` } }),
+    (r) => !(r.status === 200 && Array.isArray(r.json) && r.json.length > 0)));
+  rows.push(row(8, '금지', 'GET /api/notices (토큰 없음)', '401 JSON', await observe('/api/notices'), refusedJson));
+  rows.push(row(10, '금지', 'POST /api/restore/:id (토큰 없음)', '401 JSON', await observe(`/api/restore/${TEST_UUID}`, { method: 'POST', body: { confirm: true } }), refusedJson));
+  rows.push(row(11, '금지', 'PUT /api/notes/:id (서명·승인 없음)', '401 JSON', await observe(`/api/notes/${TEST_UUID}`, { method: 'PUT', headers: { authorization: FAKE_TOKEN }, body: { title: 'x' } }), refusedJson));
+
+  // 판정기·탐지 규칙·정책 사본: 서버가 고정된 가상 입력을 지금 실행한 결과입니다.
+  const checks = await observe('/api/checks');
+  if (checks.ran && checks.status === 200 && Array.isArray(checks.json?.cases)) {
+    for (const item of checks.json.cases) {
+      const actual = item.decision ?? item.action ?? (item.policyRevision != null ? `정책 버전 ${item.policyRevision}` : '-');
+      rows.push({ stage: item.stage, kind: item.kind, request: `가상 입력 ${item.id}`, expected: item.expected,
+        actual: `${actual}${item.reasonCode ? ` (${item.reasonCode})` : ''}`, verdict: item.ready ? 'ok' : 'bad',
+        requestId: checks.requestId, at: checks.at });
+    }
+  } else {
+    rows.push(skipped('6~10', '-', 'GET /api/checks', '규칙 점검 결과', `점검 API를 읽지 못함${checks.ran ? ` (HTTP ${checks.status})` : ''}`));
+  }
+
+  // 정상 요청: 로그인하고 이 기기가 승인된 경우에만 실제로 보냅니다. 아니면 미실행입니다.
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) {
+    rows.push(skipped(11, '정상', 'GET /api/device/status (로그인)', 'approved=true', '로그인 후 실행'));
+    rows.push(skipped(3, '정상', 'GET /api/my/notes (로그인·승인 기기)', '200, 내 메모만', '로그인·기기 승인 후 실행'));
+  } else {
+    const auth = { authorization: `Bearer ${token}` };
+    const device = await observe('/api/device/status', { headers: auth });
+    rows.push(row(11, '정상', 'GET /api/device/status (로그인)', 'approved=true', device, (r) => r.status === 200 && r.json?.approved === true));
+    if (device.json?.approved === true) {
+      const mine = await observe('/api/my/notes', { headers: auth });
+      const count = Array.isArray(mine.json) ? mine.json.length : null;
+      const shown = { ...mine, json: undefined, leaked: false };
+      const result = row(3, '정상', 'GET /api/my/notes (로그인·승인 기기)', '200, 내 메모만', shown, (r) => r.status === 200 && count !== null);
+      if (count !== null) result.actual += ` · 메모 ${count}건(본문 숨김)`;
+      rows.push(result);
+    } else {
+      rows.push(skipped(3, '정상', 'GET /api/my/notes (로그인·승인 기기)', '200, 내 메모만', '이 기기가 승인되지 않아 미실행'));
+    }
+  }
+
+  rows.sort((a, b) => Number(String(a.stage).split('~')[0]) - Number(String(b.stage).split('~')[0]));
+  const labels = { ok: '확인함', bad: '뚫림', skip: '미실행' };
+  $('ops-table').tBodies[0].replaceChildren(...rows.map((item) => {
+    const tr = document.createElement('tr');
+    for (const [key, value] of [['stage', item.stage], ['kind', item.kind], ['request', item.request], ['expected', item.expected],
+      ['actual', item.actual], ['verdict', labels[item.verdict]], ['requestId', item.requestId], ['at', item.at]]) {
+      const td = document.createElement('td');
+      td.textContent = String(value);
+      if (key === 'verdict') td.className = item.verdict;
+      tr.append(td);
+    }
+    return tr;
+  }));
+  const count = (v) => rows.filter((item) => item.verdict === v).length;
+  for (const dd of document.querySelectorAll('#ops-stats dd')) dd.textContent = String(count(dd.dataset.k));
+  const meta = checks.json && !Array.isArray(checks.json) ? checks.json : {};
+  $('ops-meta').textContent = `점검 ${rows.length}건 · 규칙 ${Array.isArray(meta.rules) ? meta.rules.join(', ') : '-'} · 정책 사본 버전 ${meta.policyRevision ?? '-'} · 배포 커밋 ${meta.commit ?? '-'} · 점검 시각 ${new Date().toISOString()}`;
+  $('ops-run').disabled = false;
+}
+
+$('ops-run').addEventListener('click', () => { runOps().catch(() => { $('ops-meta').textContent = '점검 중 오류가 났습니다.'; $('ops-run').disabled = false; }); });
+
 // 설치형 웹앱: 서비스 워커는 오프라인 안내 화면만 저장합니다(메모·API 응답은 저장하지 않음).
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 

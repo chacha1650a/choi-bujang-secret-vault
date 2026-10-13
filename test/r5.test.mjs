@@ -31,46 +31,41 @@ test('build identity uses Vercel Git and deployment metadata', () => {
   assert.throws(() => deploymentIdentity({ ...env, VERCEL_GIT_COMMIT_SHA: 'short' }, config));
 });
 
-test('stage 5 attack check also calls the original API with the public key only', async () => {
-  const originalFetch = globalThis.fetch;
-  const originalApiUrl = 'https://project.supabase.co/rest/v1/notes';
-  try {
-    globalThis.fetch = async (url) => (String(url).startsWith(originalApiUrl)
-      ? new Response(JSON.stringify([]), { status: 200 })
-      : new Response(JSON.stringify({ error: 'UNAUTHENTICATED' }), { status: 401 }));
-    const closed = await runAttackChecks({ ...config, step: 5, originalApiUrl });
-    assert.equal(closed.length, 4);
-    assert.match(closed[3].observed, /보이지 않음/u);
-    globalThis.fetch = async (url) => (String(url).startsWith(originalApiUrl)
-      ? new Response(JSON.stringify([{ id: 'x' }]), { status: 200 })
-      : new Response(JSON.stringify({ error: 'UNAUTHENTICATED' }), { status: 401 }));
-    const open = await runAttackChecks({ ...config, step: 5, originalApiUrl });
-    assert.match(open[3].observed, /메모가 보임/u);
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-});
-
-test('stage 4 attack check sends no token and a forged token', async () => {
+test('12단계 runner 규칙: 점검 항목은 다섯 값만 갖고 실제 응답으로 blocked·breached·not_run을 정한다', async () => {
   const originalFetch = globalThis.fetch;
   const seen = [];
   try {
     globalThis.fetch = async (url, init) => {
-      seen.push([String(url), init?.headers?.authorization]);
-      if (String(url).endsWith('/data.json')) return new Response('not found', { status: 404 });
+      const u = String(url);
+      seen.push([init?.method ?? 'GET', u]);
+      if (u.includes('/api/checks?case=')) return new Response(JSON.stringify({ ready: true }), { status: 200 });
+      if (u.endsWith('/api/device/status')) return new Response(JSON.stringify({ approved: false }), { status: 200 });
+      if (u.includes('/rest/v1/')) return new Response(JSON.stringify({ message: 'permission denied' }), { status: 401 });
+      if (u.endsWith('.json')) return new Response('not found', { status: 404 });
       return new Response(JSON.stringify({ error: 'UNAUTHENTICATED' }), { status: 401 });
     };
-    const results = await runAttackChecks({ ...config, step: 4 });
-    assert.deepEqual(seen, [
-      ['https://student-defense.vercel.app/data.json', undefined],
-      ['https://student-defense.vercel.app/api/notes', undefined],
-      ['https://student-defense.vercel.app/api/notes', 'Bearer aaaa.bbbb.cccc'],
-    ]);
-    assert.match(results[1].observed, /거부됨/u);
-    assert.match(results[2].observed, /거부됨/u);
-    globalThis.fetch = async () => new Response(JSON.stringify([{ id: 'x' }]), { status: 200 });
-    const open = await runAttackChecks({ ...config, step: 4 });
-    assert.match(open[1].observed, /거부되지 않음/u);
+    const results = await runAttackChecks('https://student-defense.vercel.app');
+    assert.ok(results.length >= 15 && results.length <= 20);
+    for (const item of results) {
+      assert.deepEqual(Object.keys(item).sort(), ['attackId', 'expected', 'observed', 'result', 'stage']);
+      assert.equal(item.result, 'blocked', item.attackId);
+      assert.match(item.observed, /^HTTP \d{3}.*요청 ID [0-9a-f-]{36}$/u);
+    }
+    assert.deepEqual(results.map((item) => item.stage), [...results.map((item) => item.stage)].sort((a, b) => a - b));
+    assert.ok(seen.some(([method, url]) => method === 'POST' && url.includes('/api/restore/')));
+    // 예전처럼 설정 객체를 넘겨도 같은 점검을 한다.
+    assert.equal((await runAttackChecks({ ...config, step: 12 })).length, results.length);
+
+    globalThis.fetch = async (url) => (String(url).includes('/api/my/notes')
+      ? new Response(JSON.stringify([{ id: 'x', title: 'leak' }]), { status: 200 })
+      : new Response(JSON.stringify({ error: 'x', ready: false }), { status: 401 }));
+    const open = await runAttackChecks('https://student-defense.vercel.app');
+    assert.equal(open.find((item) => item.attackId === 's03-unauth-list').result, 'breached');
+    assert.equal(open.find((item) => item.attackId === 's06-unregistered').result, 'breached');
+
+    globalThis.fetch = async () => { throw new Error('offline'); };
+    assert.ok((await runAttackChecks('https://student-defense.vercel.app')).every((item) => item.result === 'not_run'));
+    await assert.rejects(runAttackChecks('http://student-defense.vercel.app'));
   } finally {
     globalThis.fetch = originalFetch;
   }

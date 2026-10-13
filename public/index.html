@@ -26,6 +26,13 @@
     li span { color: #bfd0e5; white-space: pre-wrap; }
     #message { min-height: 1.4em; color: #ffd28a; }
     [hidden] { display: none !important; }
+    .small { font-size: 14px; }
+    .scroll { overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 12px; }
+    th, td { border-bottom: 1px solid #51667c; padding: 6px 8px; text-align: left; vertical-align: top; }
+    td.ok { color: #8ad8df; } td.bad { color: #ffb3c0; } td.skip { color: #ffd28a; }
+    #ops-stats { display: grid; grid-template-columns: max-content auto; gap: 4px 12px; margin: 12px 0; }
+    #ops-stats dd { margin: 0; font-weight: 700; }
   </style>
 </head>
 <body>
@@ -68,6 +75,24 @@
         <button type="button" id="cancel" hidden>취소</button>
       </form>
       <ul id="notes" aria-live="polite"></ul>
+    </section>
+
+    <section id="ops" class="card" aria-live="polite">
+      <h2>탈환 작전실</h2>
+      <p class="small">아래 표는 이 화면이 지금 실제로 보낸 요청의 응답과, 서버가 고정된 가상 입력으로 판정기·탐지 규칙·정책 사본을 실행한 결과입니다. 화면의 문구는 심판 통과 근거가 아니며, 보내지 못한 시험은 「미실행」으로 둡니다. 메모 본문은 표시하지 않습니다.</p>
+      <button type="button" id="ops-run">점검 실행</button>
+      <dl id="ops-stats">
+        <dt>확인함(기대대로)</dt><dd data-k="ok">-</dd>
+        <dt>뚫림(기대와 다름)</dt><dd data-k="bad">-</dd>
+        <dt>미실행</dt><dd data-k="skip">-</dd>
+      </dl>
+      <p id="ops-meta" class="small"></p>
+      <div class="scroll">
+        <table id="ops-table">
+          <thead><tr><th>단계</th><th>종류</th><th>요청</th><th>기대</th><th>실제 결과</th><th>판정</th><th>요청 ID</th><th>확인 시각</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </section>
   </main>
   <script type="module" src="/app.js"></script>
