@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 const MAX_TITLE = 200;
 const MAX_BODY = 5000;
 
-const send = (response, status, body) => response.status(status).json(body);
+export const send = (response, status, body) => response.status(status).json(body);
 const publicNote = (row) => ({ id: row.id, title: row.title, body: row.body });
 
 function readBody(request) {
@@ -32,12 +32,12 @@ function checkText(value, label, max, { required }) {
 // 8단계: 요청마다 서버가 구별할 수 있는 자원 ID입니다. 메모와 강사 공지는 서로 다른 구역입니다.
 export const resourceId = (zone, id) => `${zone}:${id}`;
 
-const forbid = (response, reason, message) => {
+export const forbid = (response, reason, message) => {
   send(response, 403, { error: 'FORBIDDEN', reason, message });
 };
 
 // 서버가 확인한 로그인 정보(verifyLogin)만 믿습니다. 브라우저가 보낸 userId·role은 읽지 않습니다.
-function createGuard(verifyLogin) {
+export function createGuard(verifyLogin) {
   async function authenticate(request, response) {
     response.setHeader('Cache-Control', 'no-store');
     const who = await verifyLogin(request.headers?.authorization);

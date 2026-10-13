@@ -1,0 +1,65 @@
+{
+  "policyRevision": 1,
+  "rules": [
+    "device_registered",
+    "resource_zone",
+    "step_up_required"
+  ],
+  "routes": [
+    {
+      "service": "notes",
+      "method": "DELETE",
+      "pathPattern": "/api/notes/:id",
+      "zone": "my-notes"
+    },
+    {
+      "service": "notes",
+      "method": "GET",
+      "pathPattern": "/api/my/notes",
+      "zone": "my-notes"
+    },
+    {
+      "service": "notes",
+      "method": "GET",
+      "pathPattern": "/api/notes/:id",
+      "zone": "my-notes"
+    },
+    {
+      "service": "notes",
+      "method": "POST",
+      "pathPattern": "/api/notes",
+      "zone": "my-notes"
+    },
+    {
+      "service": "notes",
+      "method": "POST",
+      "pathPattern": "/api/restore/:noteId",
+      "zone": "my-notes"
+    },
+    {
+      "service": "notes",
+      "method": "PUT",
+      "pathPattern": "/api/notes/:id",
+      "zone": "my-notes"
+    },
+    {
+      "service": "notices",
+      "method": "GET",
+      "pathPattern": "/api/notices",
+      "zone": "instructor-notices"
+    },
+    {
+      "service": "notices",
+      "method": "GET",
+      "pathPattern": "/api/notices/:id",
+      "zone": "instructor-notices"
+    },
+    {
+      "service": "notices",
+      "method": "PUT",
+      "pathPattern": "/api/notices/:id",
+      "zone": "instructor-notices"
+    }
+  ],
+  "sha256": "6eb56c9ec47fb757cbe350a4f5d03d18c5d387e70f939ff47d19952a6447bbff"
+}

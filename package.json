@@ -13,7 +13,11 @@
     "xdr:run": "node scripts/xdr-run.mjs",
     "test:notes": "node --test test/notes-api.test.mjs test/notices-api.test.mjs",
     "test:decider": "node --test test/decider.test.mjs",
-    "test:detect": "node --test test/detect.test.mjs"
+    "test:detect": "node --test test/detect.test.mjs",
+    "policy:snapshot": "node scripts/policy.mjs snapshot",
+    "policy:diff": "node scripts/policy.mjs diff",
+    "policy:restore": "node scripts/policy.mjs restore",
+    "test:restore": "node --test test/restore-api.test.mjs test/policy.test.mjs"
   },
   "engines": {
     "node": ">=22"

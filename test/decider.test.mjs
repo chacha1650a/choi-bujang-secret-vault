@@ -74,12 +74,14 @@ test('8단계: 내 메모 구역 경로만 허용하고, 전체 목록·공지 �
     { method: 'GET', path: '/api/my/notes', route: 'GET /api/my/notes' },
     { method: 'GET', path: '/my/notes', route: 'GET /my/notes' },
     { method: 'POST', path: '/api/notes', route: 'POST /api/notes' },
+    { method: 'POST', path: '/api/restore/demo', route: 'POST /api/restore/:noteId' },
   ];
   for (const changes of allowed) {
     assert.equal((await decide(variant(normal, changes))).decision, 'allow', JSON.stringify(changes));
   }
   const denied = [
     { method: 'GET', path: '/api/notes', route: 'GET /api/notes' },
+    { method: 'GET', path: '/api/restore/demo', route: 'GET /api/restore/:noteId' },
     { method: 'GET', path: '/notes', route: 'GET /notes' },
     { method: 'GET', path: '/api/notes/all', route: 'GET /api/notes/all' },
     { method: 'GET', path: '/api/admin/notes', route: 'GET /api/admin/notes' },

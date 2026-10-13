@@ -147,3 +147,28 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 - 제작 3: 의심이면 접속 허용/거부 응답과 별도의 결과로 `{ action: 'propose_revocation', reasonCode: 'burst_read', subject }`를 냅니다. 대상은 의심 사용자 한 명(가명)이고, 회수 API를 만들거나 기기 권한을 바꾸지 않습니다. 실제 회수와 경과 시간은 심판이 확인합니다. 정상이면 `{ action: 'observe' }`입니다.
 - 확인 순서: `npm run detect:test`(6건: 정상 30건·120건 유지, 121건·200건 회수 제안, 서로 다른 사용자·10분 밖 흩어짐 유지), `npm run test:detect`(조회 외 요청, 형식 오류, 계약 밖 값 무시, 결과에 다른 값이 없는지). 가상 사건 연습이며 실제 접속 회수나 심판 판정이 아닙니다.
 - 남은 약점: 기준(10분·120건)이 고정값입니다. 회수 제안을 실제로 집행하고 회수된 세션의 재시도를 막는 일은 반 엔진 몫이라 이 저장소에서는 확인하지 않았습니다.
+
+## 10단계 기록: 백업에서 자료실을 되살립니다
+
+- 제작 1(정책 차이): `policy/verified-policy.json`은 침해 전에 검증한 안전 정책 사본입니다(정책 버전, 판정기 규칙 이름, 경로·구역 표, SHA-256). `npm run policy:diff`는 사본을 다시 읽어 해시를 검증한 뒤 지금 시험 정책(`aleph.config.json`의 `allowedRoutes` + `src/decider.mjs`의 `RULE_IDS`)과의 차이만 보여 줍니다. 사본이 없거나 형식·해시가 틀리면 중단합니다. 실제 운영 정책(반 엔진·Supabase)은 건드리지 않습니다.
+- 제작 2(정책 되돌리기): `npm run policy:restore`는 바뀔 항목만 보여 주고 멈추며, `npm run policy:restore -- --apply`일 때만 사본의 서비스(notes·notices) 경로 표를 되돌립니다. 사본에 없는 다른 서비스 경로는 그대로 두고, `policy/audit.jsonl`에 한 줄을 덧붙입니다(기존 줄은 고치지 않음). 규칙 이름이 다르면 코드 변경이라 자동으로 고치지 않고 멈춥니다(git으로 `src/decider.mjs`를 되돌림).
+- 제작 3(메모 한 건 복원): 서비스 `notes`, 경로 `POST /api/restore/:noteId`(서버 함수 `api/restore/[noteId].js`, `aleph.config.json`의 `restoreRoute`).
+  - 사본: `supabase/step10-backup.sql`의 트리거가 메모가 처음 만들어질 때 ID·소유자·제목·본문·내용 해시(제목+U+001F+본문의 SHA-256)를 `note_snapshots`에 남깁니다. 서버는 사본을 읽기만 합니다. 기존 메모도 실행 시점 내용으로 사본을 남겼습니다.
+  - 절차: 로그인 확인 → 사본을 다시 읽어 해시 검증(없으면 404 `NO_SNAPSHOT`, 틀리면 409 `SNAPSHOT_INVALID`로 멈춤) → 사본 소유자가 본인이 아니면 403 → 그 한 건만 사본 내용으로 되돌림(지워졌으면 같은 ID·소유자로 다시 만듦) → 복원한 행의 ID·소유자·내용 해시를 사본과 대조 → `audit_log`에 한 줄 덧붙임(본문·토큰은 넣지 않음). 다른 메모와 기존 감사 기록은 건드리지 않습니다.
+  - 응답 예: `200 { id, restored: true, before: 'modified'|'deleted'|'unchanged', contentSha256, matches: { id, owner, contentSha256 } }`.
+  - 확인은 시험 계정 B의 메모로만 합니다(B가 만든 메모를 고치거나 지운 뒤 B로 복원 호출).
+- 제작 4(복구 뒤 재시험 순서): 아래 순서대로 다시 실행합니다. 결과 칸은 실제로 실행한 것만 적습니다.
+
+| 순서 | 요청 | 기대 | 결과 |
+|---|---|---|---|
+| 1 | `npm run policy:diff` | 차이 없음 | 실행: 차이 없음 |
+| 2 | 로컬 시험 `npm run test:restore`·`test:decider`·`test:notes`·`test:detect`·`decider:test`·`detect:test` | 모두 통과 | 실행: 모두 통과 |
+| 3 | 토큰 없이 `GET /api/my/notes`, `GET /api/notes`, `POST /api/restore/:noteId` | 401 JSON | 배포 후 실행 예정 |
+| 4 | 엉터리 토큰으로 `GET /api/my/notes` | 401 JSON | 배포 후 실행 예정 |
+| 5 | `/data.json`, 공개 키로 원본 `/rest/v1/notes` | 404 / 권한 오류 | 배포 후 실행 예정 |
+| 6 | A로 로그인해 내 메모 목록·추가·수정·삭제 | 정상 | 미실행(학생 직접 확인) |
+| 7 | B로 A의 메모 읽기·고치기·지우기·복원 | 403 | 미실행(심판 공격으로 확인) |
+| 8 | B로 자기 메모를 고치거나 지운 뒤 `POST /api/restore/:id` | 200, 사본과 같은 ID·소유자·해시 | 미실행(심판 공격으로 확인) |
+| 9 | 판정기: 미등록 기기 거부, 복합 이상 추가 확인, 전체 목록·공지 거부 | deny / step_up / deny | 실행: test:decider 통과 |
+
+- 남은 약점: 사본은 메모가 처음 만들어질 때 한 번만 남기므로, 정상적으로 고친 내용도 복원하면 처음 내용으로 돌아갑니다. 사본 테이블 자체의 백업과 정기 복원 시험은 아직 없습니다.

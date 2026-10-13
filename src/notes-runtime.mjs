@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import config from '../aleph.config.json' with { type: 'json' };
 import { createNoticesApi, createNotesApi } from './notes-api.mjs';
+import { createRestoreApi } from './restore-api.mjs';
 import { createLoginVerifier } from './verify-login.mjs';
 
 let cached;
@@ -18,6 +19,7 @@ function getApis(env) {
   cached = {
     notes: createNotesApi({ verifyLogin, supabase }),
     notices: createNoticesApi({ verifyLogin, supabase }),
+    restore: createRestoreApi({ verifyLogin, supabase }),
   };
   return cached;
 }
@@ -28,6 +30,10 @@ export function getNotesApi(env = process.env) {
 
 export function getNoticesApi(env = process.env) {
   return getApis(env)?.notices ?? null;
+}
+
+export function getRestoreApi(env = process.env) {
+  return getApis(env)?.restore ?? null;
 }
 
 export function notFoundConfig(response) {
