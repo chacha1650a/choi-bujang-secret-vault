@@ -66,3 +66,32 @@ test('7단계: 최근에 다시 로그인했을 때만 이상 접속을 허용�
     deviceRegistered: false, stepUp: { verified: true, authAgeSeconds: 10 } }));
   assert.equal(unregistered.decision, 'deny');
 });
+
+test('8단계: 구역 표에 있는 메모·공지 읽기는 허용하고, 공지 수정·다른 경로·쿼리는 거부한다', async () => {
+  const allowed = [
+    { method: 'GET', path: '/notes/demo', route: 'GET /notes/:id' },
+    { method: 'PUT', path: '/notes/demo', route: 'PUT /notes/:id' },
+    { method: 'GET', path: '/api/notes', route: 'GET /api/notes' },
+    { method: 'GET', path: '/notices', route: 'GET /notices' },
+    { method: 'GET', path: '/notices/n1', route: 'GET /notices/:id' },
+  ];
+  for (const changes of allowed) {
+    assert.equal((await decide(variant(normal, changes))).decision, 'allow', JSON.stringify(changes));
+  }
+  const denied = [
+    { method: 'PUT', path: '/notices/n1', route: 'PUT /notices/:id' },
+    { method: 'DELETE', path: '/notices/n1', route: 'DELETE /notices/:id' },
+    { method: 'GET', path: '/notes/export', route: 'GET /notes/export' },
+    { method: 'GET', path: '/notes/a/b', route: 'GET /notes/:id' },
+    { method: 'GET', path: '/admin/notes', route: 'GET /notes/:id' },
+    { method: 'PUT', path: '/notes/demo', route: 'GET /notes/:id' },
+    { queryLength: 12 },
+    { subjectId: '' },
+    { route: 'GET /constructor' },
+  ];
+  for (const changes of denied) {
+    const out = await decide(variant(normal, changes));
+    assert.equal(out.decision, 'deny', JSON.stringify(changes));
+    assert.equal(out.reasonCode, 'resource_zone_denied');
+  }
+});

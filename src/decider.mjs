@@ -1,7 +1,22 @@
 // ALEPH SDP 엔진이 확인한 요청만 받는 학생 판정기입니다.
 // 규칙을 하나씩 추가합니다. 규칙에 해당하지 않는 요청은 모두 거부합니다.
 // 요청 본문의 userId, role, 기기 키, 토큰을 별도로 믿거나 저장하지 마세요.
-export const RULE_IDS = Object.freeze(['device_registered', 'step_up_required']);
+export const RULE_IDS = Object.freeze(['device_registered', 'resource_zone', 'step_up_required']);
+
+// 8단계: 구역별로 허용하는 정확한 경로입니다. 표에 없는 메서드·경로는 모두 거부합니다.
+// 경로는 자료 ID 한 칸만 고르고, 쿼리로 기능을 고르지 않습니다. 메모의 소유자는 자료 API가 다시 확인합니다.
+// 공지 수정(PUT /notices/:id)은 강사 역할이 이 계약에 없어서 판정기에서는 허용하지 않습니다.
+const SEGMENT = '[A-Za-z0-9_-]{1,64}';
+const ZONES = Object.freeze({
+  'GET /notes': { zone: 'note', path: /^\/notes$/u },
+  'POST /notes': { zone: 'note', path: /^\/notes$/u },
+  'GET /notes/:id': { zone: 'note', path: new RegExp(`^/notes/${SEGMENT}$`, 'u') },
+  'PUT /notes/:id': { zone: 'note', path: new RegExp(`^/notes/${SEGMENT}$`, 'u') },
+  'DELETE /notes/:id': { zone: 'note', path: new RegExp(`^/notes/${SEGMENT}$`, 'u') },
+  'GET /notices': { zone: 'notice', path: /^\/notices$/u },
+  'GET /notices/:id': { zone: 'notice', path: new RegExp(`^/notices/${SEGMENT}$`, 'u') },
+});
+const stripApi = (value) => value.replace(/^\/api(?=\/)/u, '');
 
 // 7단계: 평소와 다른 접속의 기준입니다. 새벽 시각, 처음 보는 네트워크, 다른 지역, 짧은 시간의 많은 사건.
 const USUAL_REGIONS = new Set(['local', 'unknown']);
@@ -56,6 +71,22 @@ function readEvents(events) {
   return { verified: true, anomalies: recent >= BURST_COUNT ? ['burst_activity'] : [] };
 }
 
+// 8단계: 엔진이 확인한 사용자·기기·메서드·경로·자원 경로 모양이 구역 표와 정확히 맞는지 봅니다.
+function zoneOf(request) {
+  const { subjectId, deviceId, method, path, route, queryLength } = request;
+  if (typeof subjectId !== 'string' || !subjectId || typeof deviceId !== 'string'
+      || !/^[0-9a-f]{16}$/u.test(deviceId) || typeof method !== 'string'
+      || typeof path !== 'string' || typeof route !== 'string' || queryLength !== 0) {
+    return null;
+  }
+  const space = route.indexOf(' ');
+  if (space < 0 || route.slice(0, space) !== method) return null;
+  const key = `${method} ${stripApi(route.slice(space + 1))}`;
+  const rule = Object.hasOwn(ZONES, key) ? ZONES[key] : null;
+  if (!rule || !rule.path.test(stripApi(path))) return null;
+  return rule.zone;
+}
+
 // 제작 3: 엔진이 검증한 재로그인 정보(stepUp)만 봅니다. 확인했다는 표시와 최근 로그인 시각이 모두 맞아야 합니다.
 function steppedUp(stepUp) {
   return isObject(stepUp) && stepUp.verified === true
@@ -68,6 +99,10 @@ export async function decide(request) {
   if (request?.deviceRegistered !== true) {
     return respond(request ?? {}, 'deny', 'device_not_registered', ['device_registered']);
   }
+  // 8단계: 구역 표에 없는 요청(다른 구역, 공지 수정, 기능 경로, 쿼리 사용)은 거부합니다.
+  if (!zoneOf(request)) {
+    return respond(request, 'deny', 'resource_zone_denied', ['resource_zone']);
+  }
   // 7단계: 평소와 다른 접속이거나 접속 정보를 확인할 수 없으면 추가 확인을 요구합니다.
   // 영구 차단하지 않고, 새로 로그인한 뒤의 요청은 다시 판정해 허용합니다.
   const signals = readSignals(request.signals);
@@ -76,9 +111,9 @@ export async function decide(request) {
     || signals.anomalies.length > 0 || events.anomalies.length > 0;
   if (unusual) {
     if (steppedUp(request.stepUp)) {
-      return respond(request, 'allow', 'approved', ['device_registered', 'step_up_required']);
+      return respond(request, 'allow', 'approved', ['device_registered', 'resource_zone', 'step_up_required']);
     }
     return respond(request, 'step_up', 'step_up_required', ['step_up_required']);
   }
-  return respond(request, 'allow', 'approved', ['device_registered']);
+  return respond(request, 'allow', 'approved', ['device_registered', 'resource_zone']);
 }

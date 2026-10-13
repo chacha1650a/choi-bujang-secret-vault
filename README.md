@@ -127,3 +127,12 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 - 제작 3: 제공 계약의 재로그인 정보는 엔진이 검증한 `stepUp {verified, authAgeSeconds}`입니다. `verified`가 true이고 다시 로그인한 지 300초 안일 때만 이상 접속을 허용합니다. 이 자료실의 Vercel 서버 함수는 판정기를 부르지 않으므로, 실제 자료의 재로그인 전 차단과 새 요청 허용은 **미실행**입니다(엔진이 연결된 환경에서만 실측). 토큰 원문은 기록하지 않습니다.
 - 확인 순서: `npm run decider:test`(4건 통과), `npm run fixture:7`(정상 allow, 복합 이상 step_up), `npm run test:decider`(지역·시각·네트워크·대량 사건, 위조 출처, 재로그인 나이 검사). 모두 가상 요청 연습이며 심판 판정이 아닙니다.
 - 남은 약점: 기준(새벽 시각, 10건)은 고정값이라 사용자별 평소 패턴을 배우지 않습니다. 실제 경로에는 위치 정보가 없어서 지역·네트워크 규칙은 심판의 가상 사건에서만 작동합니다.
+
+## 8단계 기록: 자료마다 갈 수 있는 구역을 나눕니다
+
+- 제작 1: 메모와 강사 공지를 서로 다른 자원 ID로 구분합니다. 응답 헤더 `X-Resource-Id`에 `note:<id>`·`notes:mine`(메모), `notice:<id>`·`notices:class`(공지)가 붙습니다. 기존 메모 주소와 자료는 그대로이고 화면 메뉴는 바꾸지 않았습니다.
+- 공지 구역: `GET /api/notices`, `GET·PUT /api/notices/:id`(서버 함수 `api/notices.js`, `api/notices/[id].js`). DB는 `supabase/step8-notices.sql`로 `notices`(가상 공지 1건)와 `instructors`(강사 명단, 비어 있음)를 만들고, 두 테이블 모두 브라우저 역할 권한 없이 서버 전용 키만 씁니다.
+- 제작 2: 판정기에 `resource_zone` 규칙을 넣었습니다. 엔진이 확인한 사용자(`subjectId`)·기기(`deviceId`)·메서드·정확한 경로가 구역 표(메모 5개 경로, 공지 읽기 2개 경로)와 맞을 때만 다음 규칙으로 넘어가고, 표에 없는 경로·메서드와 경로 모양이 다른 요청, 쿼리가 붙은 요청은 `resource_zone_denied`로 거부합니다. 공지 수정은 강사 역할이 판정 계약에 없어서 판정기에서는 허용하지 않습니다. 기존 기기·추가 확인 규칙은 그대로입니다.
+- 제작 3: 자료 API가 다시 확인합니다. 메모는 DB 소유자와 검증된 사용자가 다르면 403(`reason: not_owner`), 공지 수정은 검증된 학생 계정이 DB 강사 명단에 있을 때만 허용하고 아니면 403(`reason: instructor_only`)입니다. 화면 메뉴·요청 본문·토큰의 role은 믿지 않고, 심판 시험 신원은 강사가 될 수 없습니다.
+- 확인 순서: `npm run test:decider`(구역 허용·거부), `npm run test:notes`(공지 읽기, 학생·심판의 공지 수정 거부, 강사 명단 계정만 수정, B의 A 메모 거부). 토큰 없이 `/api/notices`를 부르면 401입니다.
+- 남은 약점: 강사 명단은 SQL Editor로만 관리합니다. 판정기와 자료 API의 경로 표를 두 곳에서 맞춰야 합니다.
