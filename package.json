@@ -12,7 +12,8 @@
     "fixture:7": "node scripts/fixture-7.mjs",
     "xdr:run": "node scripts/xdr-run.mjs",
     "test:notes": "node --test test/notes-api.test.mjs test/notices-api.test.mjs",
-    "test:decider": "node --test test/decider.test.mjs"
+    "test:decider": "node --test test/decider.test.mjs",
+    "test:detect": "node --test test/detect.test.mjs"
   },
   "engines": {
     "node": ">=22"

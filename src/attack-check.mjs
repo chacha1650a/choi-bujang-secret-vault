@@ -20,7 +20,7 @@ const refused =(result) => [401, 403].includes(result.status)
   && typeof result.body?.error === 'string' && !Array.isArray(result.body);
 
 export async function runAttackChecks(config) {
-  if (![4, 5, 6, 7, 8].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
+  if (![4, 5, 6, 7, 8, 9].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
   let app;
   try {
     app = new URL(config.publicAppUrl);
