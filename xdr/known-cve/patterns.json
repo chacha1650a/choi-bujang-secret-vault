@@ -1,0 +1,37 @@
+{
+  "schema": "aleph.xdr.patterns.v1",
+  "moduleKey": "known-cve",
+  "mitre": ["T1190"],
+  "patterns": [
+    {
+      "id": "kc-jndi-lookup",
+      "name": "원격 조회 구문(CVE-2021-44228 형태)",
+      "tier": "strong",
+      "condition": "요청 머리글이나 인자에 완전한 원격 조회 구문(${jndi:프로토콜:...} 또는 중첩 표기)이 있음",
+      "evidence": "CVE-2021-44228(Log4Shell)·MITRE ATT&CK T1190: 로그에 남는 값의 원격 조회 구문으로 서버가 바깥 코드를 불러오게 하는 공격",
+      "when": { "fields": ["data.url", "data.useragent", "data.header", "data.referer"], "regex": "\\$\\{\\s*jndi\\s*:\\s*(ldaps?|rmi|dns|iiop|nis|nds|corba|https?)\\s*:|\\$\\{[^\\s]{0,60}\\$\\{(lower|upper|env|sys|::-)[^}]*\\}" }
+    },
+    {
+      "id": "kc-cve-trace",
+      "name": "취약점 이름·조회 단어·점검 도구 흔적만 있음",
+      "tier": "medium",
+      "condition": "취약점 번호·jndi·log4j·lookup 같은 단어나 점검 도구 이름은 있지만 완전한 조회 구문은 없음",
+      "evidence": "CVE-2021-44228·MITRE ATT&CK T1190: 취약점 이름 검색·문서 열람·점검 도구 흔적은 정찰일 수도 수업일 수도 있어 사람이 확인해야 함",
+      "when": { "any": [
+        { "fields": ["data.url", "data.useragent"], "regex": "\\bcve\\b|cve-\\d{4}|\\bjndi\\b|jndi-|log4j|log4shell|lookup|\\$\\{|nuclei|nikto|sqlmap|masscan|zgrab|acunetix|nessus|openvas" },
+        { "field": "rule.description", "regex": "CVE-|jndi|조회 형태|중괄호|점검 도구|라이브러리|취약점 (목록|이름)" }
+      ] }
+    },
+    {
+      "id": "kc-wazuh-level",
+      "name": "Wazuh 알려진 취약점 경보 등급",
+      "tier": "weak",
+      "condition": "Wazuh 규칙 수준 5 이상이고 rule.mitre 에 T1190 이 붙음",
+      "evidence": "Wazuh 규칙 수준(rule.level)과 MITRE ATT&CK T1190 표시: 경보 원천이 공개 앱 취약점 악용 시도로 분류한 사건",
+      "when": { "all": [
+        { "field": "rule.level", "gte": 5 },
+        { "field": "rule.mitre", "includesAny": ["T1190"] }
+      ] }
+    }
+  ]
+}

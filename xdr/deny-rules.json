@@ -244,6 +244,113 @@
       "reasons": [
         "SQL 구문 주입 반복 · Wazuh 수준 10"
       ]
+    },
+    {
+      "id": "xdr_block.known-cve.203.0.113.10",
+      "moduleKey": "known-cve",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "203.0.113.10",
+      "createdAt": "2026-10-13T07:04:30.759Z",
+      "expiresAt": "2026-10-13T08:04:30.759Z",
+      "evidenceAlertIds": [
+        "kc-01",
+        "kc-02"
+      ],
+      "reasons": [
+        "원격 조회 구문(CVE-2021-44228 형태) · Wazuh 수준 13",
+        "원격 조회 구문(CVE-2021-44228 형태) · Wazuh 수준 12"
+      ]
+    },
+    {
+      "id": "xdr_block.known-cve.198.51.100.16",
+      "moduleKey": "known-cve",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "198.51.100.16",
+      "createdAt": "2026-10-13T07:04:30.759Z",
+      "expiresAt": "2026-10-13T08:04:30.759Z",
+      "evidenceAlertIds": [
+        "kc-03"
+      ],
+      "reasons": [
+        "원격 조회 구문(CVE-2021-44228 형태) · Wazuh 수준 12"
+      ]
+    },
+    {
+      "id": "xdr_block.known-cve.192.0.2.16",
+      "moduleKey": "known-cve",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "192.0.2.16",
+      "createdAt": "2026-10-13T07:04:30.759Z",
+      "expiresAt": "2026-10-13T08:04:30.759Z",
+      "evidenceAlertIds": [
+        "kc-04"
+      ],
+      "reasons": [
+        "원격 조회 구문(CVE-2021-44228 형태) · Wazuh 수준 13"
+      ]
+    },
+    {
+      "id": "xdr_block.known-cve.203.0.113.24",
+      "moduleKey": "known-cve",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "203.0.113.24",
+      "createdAt": "2026-10-13T07:04:30.759Z",
+      "expiresAt": "2026-10-13T08:04:30.759Z",
+      "evidenceAlertIds": [
+        "kc-05"
+      ],
+      "reasons": [
+        "원격 조회 구문(CVE-2021-44228 형태) · Wazuh 수준 12"
+      ]
+    },
+    {
+      "id": "xdr_block.known-cve.198.51.100.24",
+      "moduleKey": "known-cve",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "198.51.100.24",
+      "createdAt": "2026-10-13T07:04:30.759Z",
+      "expiresAt": "2026-10-13T08:04:30.759Z",
+      "evidenceAlertIds": [
+        "kc-06"
+      ],
+      "reasons": [
+        "원격 조회 구문(CVE-2021-44228 형태) · Wazuh 수준 11"
+      ]
+    },
+    {
+      "id": "xdr_block.known-cve.192.0.2.24",
+      "moduleKey": "known-cve",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "192.0.2.24",
+      "createdAt": "2026-10-13T07:04:30.759Z",
+      "expiresAt": "2026-10-13T08:04:30.759Z",
+      "evidenceAlertIds": [
+        "kc-07"
+      ],
+      "reasons": [
+        "원격 조회 구문(CVE-2021-44228 형태) · Wazuh 수준 12"
+      ]
+    },
+    {
+      "id": "xdr_block.known-cve.203.0.113.31",
+      "moduleKey": "known-cve",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "203.0.113.31",
+      "createdAt": "2026-10-13T07:04:30.759Z",
+      "expiresAt": "2026-10-13T08:04:30.759Z",
+      "evidenceAlertIds": [
+        "kc-08"
+      ],
+      "reasons": [
+        "원격 조회 구문(CVE-2021-44228 형태) · Wazuh 수준 10"
+      ]
     }
   ]
 }
