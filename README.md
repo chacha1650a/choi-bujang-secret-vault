@@ -253,3 +253,33 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 5. **접속 앱:** 배포 주소를 열어 로그인 → 「이 기기 승인 요청」 → 강사가 `supabase/step11-devices.sql`의 안내대로 그 한 건만 승인 → 「승인 상태 다시 확인」.
 6. **중지:** Vercel 프로젝트에서 배포를 내리거나(Instant Rollback·일시 중지), 기기 승인을 `revoked`로 바꿉니다. 엔진 쪽 경로 허용을 끄는 일은 엔진 몫입니다.
 7. **복구:** 검사한 커밋으로 되돌려 다시 배포합니다(`git checkout <검사한 커밋>` 뒤 재배포). 정책은 `npm run policy:diff` → `npm run policy:restore -- --apply`, 메모 한 건은 `POST /api/restore/:noteId`(미리 보기 → `{ "confirm": true }`). 복구 뒤에는 위 「제작 2」 절차로 다시 실측합니다.
+
+### 실측 결과 (`npm run bundle` → `npm run checks:table`, 실제 배포에 보낸 요청)
+
+점검 시각 2026-10-13T04:55:27.454Z · 커밋 788c5c798ab7 · 단계 12
+
+| 단계 | 점검 | 기대 | 실제 응답 · 요청 ID | 결과 |
+|---|---|---|---|---|
+| 1 | s01-static-notes | /data.json에 메모가 없음 | HTTP 404; 요청 ID 19fd69a7-139c-420e-b429-ce9615a3e4ec | 막음(기대대로) |
+| 2 | s02-static-copy | 다른 정적 사본(/notes.json)에 메모가 없음 | HTTP 404; 요청 ID 22387de7-2f6b-485f-82a9-ebb056afc1ca | 막음(기대대로) |
+| 3 | s03-unauth-list | 로그인 없는 내 메모 목록은 401·403과 JSON 오류 | HTTP 401; 요청 ID e3860a5a-bcc5-47d0-8b19-d8a7c26e8cde | 막음(기대대로) |
+| 3 | s03-fake-token | 엉터리 토큰은 401·403과 JSON 오류 | HTTP 401; 요청 ID f8c261cf-54f2-4b54-9b2e-04a1d1a286e1 | 막음(기대대로) |
+| 4 | s04-query-identity | 쿼리로 넣은 신원·역할은 무시 | HTTP 401; 요청 ID 3bb21e21-d3fe-4227-b128-5a3151221e43 | 막음(기대대로) |
+| 4 | s04-header-identity | 헤더로 넣은 신원·역할은 무시 | HTTP 401; 요청 ID 898cef59-0cbf-4c25-9492-16e8078ed633 | 막음(기대대로) |
+| 5 | s05-direct-table | 공개 키로 원본 자료 API를 직접 불러도 메모가 없음 | HTTP 401; 요청 ID f1cc7eef-829b-4b0d-a5f3-f9efe40b9eac | 막음(기대대로) |
+| 6 | s06-unregistered | 미등록 기기 거부 | HTTP 200; jsonReady=true; 요청 ID a8e347b2-3466-4e10-9461-dc9aab24b532 | 막음(기대대로) |
+| 7 | s07-compound | 복합 이상 접속은 추가 확인 | HTTP 200; jsonReady=true; 요청 ID 70107a34-2808-4cee-a6d4-594d7570d378 | 막음(기대대로) |
+| 8 | s08-other-zone | 로그인 없는 강사 공지 조회 거부 | HTTP 401; 요청 ID e1a57a67-45cc-4513-bb9b-3c8072618155 | 막음(기대대로) |
+| 8 | s08-unknown-route | 모르는 경로 거부 | HTTP 200; jsonReady=true; 요청 ID 4ff1a384-d305-4ba9-935d-18d8517119dd | 막음(기대대로) |
+| 8 | s08-all-notes | 전체 메모 목록 거부 | HTTP 200; jsonReady=true; 요청 ID 97cb59b6-746d-452f-8492-3335b8b8daae | 막음(기대대로) |
+| 8 | s08-write-notice | 반 공지 쓰기 거부 | HTTP 200; jsonReady=true; 요청 ID a6370024-df1a-406c-813b-8834f17bd392 | 막음(기대대로) |
+| 9 | s09-burst-read | 조회 폭주는 회수 제안 | HTTP 200; jsonReady=true; 요청 ID 09cd3d52-988b-474f-ab32-972546d0975b | 막음(기대대로) |
+| 10 | s10-restore-unauth | 로그인 없는 복원 요청 거부 | HTTP 401; 요청 ID 85dc2799-c6d2-40f7-9eab-30fe30701b27 | 막음(기대대로) |
+| 10 | s10-policy-verified | 검증한 정책 사본과 지금 정책이 같음 | HTTP 200; jsonReady=true; 요청 ID c37a7de3-52af-454b-bdd2-ce27ddd8edc3 | 막음(기대대로) |
+| 11 | s11-device | 로그인 없는 기기 상태는 승인 전·자료 없음 | HTTP 200; 요청 ID 1d1c89b1-ca33-4531-af5e-5ea1f43948d3 | 막음(기대대로) |
+| 11 | s11-unsigned-write | 서명·승인 없는 수정 요청 거부 | HTTP 401; 요청 ID cf2cccbf-63be-4e1b-95ce-2d3790adebd9 | 막음(기대대로) |
+
+막음 18 · 뚫림 0 · 미실행 0
+
+- 로그인이 필요한 정상 요청(승인 기기의 내 메모 조회·기기 승인 상태)은 묶음에서 보내지 않습니다. 2026-10-13에 작전실 화면 대신 앱 화면에서 학생이 로그인·기기 승인 후 메모 추가·수정·삭제가 정상인 것을 직접 확인했습니다.
+- 위 표는 커밋 788c5c7 배포에 대한 결과입니다. 41종 공격 전체는 심판이 보내며 이 저장소에서는 실행하지 않았습니다.
