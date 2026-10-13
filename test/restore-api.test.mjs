@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { readFile } from 'node:fs/promises';
+import { RULE_IDS } from '../src/decider.mjs';
 import { contentHash, createRestoreApi } from '../src/restore-api.mjs';
+
+const verified = JSON.parse(await readFile(new URL('../policy/verified-policy.json', import.meta.url), 'utf8'));
+const config = JSON.parse(await readFile(new URL('../aleph.config.json', import.meta.url), 'utf8'));
 
 const A = '11111111-1111-4111-8111-111111111111';
 const B = '33333333-3333-4333-8333-333333333333';
@@ -36,7 +41,7 @@ function fakeSupabase(tables) {
   };
 }
 
-function call(handler, { method = 'POST', authorization, query } = {}) {
+function call(handler, { method = 'POST', authorization, query, body } = {}) {
   return new Promise((resolve) => {
     const out = { headers: {} };
     const response = {
@@ -45,7 +50,7 @@ function call(handler, { method = 'POST', authorization, query } = {}) {
       json(value) { out.body = value; resolve(out); },
       end() { resolve(out); },
     };
-    Promise.resolve(handler({ method, headers: { authorization }, query }, response));
+    Promise.resolve(handler({ method, headers: { authorization }, query, body }, response));
   });
 }
 
@@ -57,7 +62,7 @@ const verifyLogin = async (authorization) => ({
 const snapshot = (id, owner, title, body) => ({ note_id: id, owner_id: owner, title, body,
   content_sha256: contentHash(title, body) });
 
-function setup() {
+function setup(policy = { snapshot: verified, config, ruleIds: RULE_IDS }) {
   const tables = {
     notes: [
       { id: NOTE_A, owner_id: A, title: 'A의 메모', body: 'A 원본' },
@@ -66,14 +71,24 @@ function setup() {
     note_snapshots: [snapshot(NOTE_A, A, 'A의 메모', 'A 원본'), snapshot(NOTE_B, B, 'B의 메모', 'B 원본')],
     audit_log: [{ actor: A, action: 'old_entry', resource: 'note:x', detail: {} }],
   };
-  return { tables, api: createRestoreApi({ verifyLogin, supabase: fakeSupabase(tables) }) };
+  return { tables, api: createRestoreApi({ verifyLogin, supabase: fakeSupabase(tables), policy }) };
 }
 
 test('10단계: B가 변조한 자기 메모를 사본으로 되살리고 ID·소유자·해시를 대조한다', async () => {
   const { tables, api } = setup();
   tables.notes[1].body = '변조됨';
-  const out = await call(api.restore, { authorization: 'Bearer b', query: { noteId: NOTE_B } });
+  // 실행 전: 버전과 바뀔 항목만 보여 주고 쓰지 않는다.
+  const preview = await call(api.restore, { authorization: 'Bearer b', query: { noteId: NOTE_B } });
+  assert.equal(preview.status, 200);
+  assert.equal(preview.body.dryRun, true);
+  assert.equal(preview.body.restored, false);
+  assert.deepEqual(preview.body.changes, ['body']);
+  assert.equal(preview.body.version.policyRevision, verified.policyRevision);
+  assert.equal(preview.body.version.snapshotSha256, contentHash('B의 메모', 'B 원본'));
+  assert.equal(tables.notes[1].body, '변조됨');
+  const out = await call(api.restore, { authorization: 'Bearer b', query: { noteId: NOTE_B }, body: { confirm: true } });
   assert.equal(out.status, 200);
+  assert.equal(out.body.restored, true);
   assert.equal(out.body.before, 'modified');
   assert.deepEqual(out.body.matches, { id: true, owner: true, contentSha256: true });
   assert.equal(tables.notes[1].body, 'B 원본');
@@ -88,7 +103,10 @@ test('10단계: B가 변조한 자기 메모를 사본으로 되살리고 ID·�
 test('10단계: B가 지운 자기 메모를 같은 ID·소유자로 다시 만든다', async () => {
   const { tables, api } = setup();
   tables.notes.splice(1, 1);
-  const out = await call(api.restore, { authorization: 'Bearer b', query: { noteId: NOTE_B } });
+  const preview = await call(api.restore, { authorization: 'Bearer b', query: { noteId: NOTE_B } });
+  assert.deepEqual(preview.body.changes, ['id', 'owner', 'title', 'body']);
+  assert.equal(tables.notes.length, 1);
+  const out = await call(api.restore, { authorization: 'Bearer b', query: { noteId: NOTE_B }, body: { confirm: true } });
   assert.equal(out.status, 200);
   assert.equal(out.body.before, 'deleted');
   const back = tables.notes.find((row) => row.id === NOTE_B);
@@ -108,8 +126,36 @@ test('10단계: 로그인 없음 401, 남의 메모 복원 403, 사본 없음 40
   assert.equal((await call(api.restore, { authorization: 'Bearer b', query: { noteId: 'export' } })).status, 404);
   tables.note_snapshots[1].body = '사본 변조';
   tables.notes[1].body = '변조됨';
-  const bad = await call(api.restore, { authorization: 'Bearer b', query: { noteId: NOTE_B } });
+  const bad = await call(api.restore, { authorization: 'Bearer b', query: { noteId: NOTE_B }, body: { confirm: true } });
   assert.equal(bad.status, 409);
   assert.equal(tables.notes[1].body, '변조됨');
   assert.equal((await call(api.restore, { authorization: 'Bearer b', method: 'GET', query: { noteId: NOTE_B } })).status, 405);
+});
+
+test('10단계: 안전 정책 사본이 없거나 고쳐졌거나 지금 정책과 다르면 확인해도 복원하지 않는다', async () => {
+  const cases = [
+    { snapshot: null, config, ruleIds: RULE_IDS },
+    { snapshot: { ...verified, rules: [] }, config, ruleIds: RULE_IDS },
+    { snapshot: verified, config: { ...config, allowedRoutes: [...config.allowedRoutes,
+      { service: 'notes', method: 'GET', pathPattern: '/api/notes', zone: 'my-notes' }] }, ruleIds: RULE_IDS },
+    { snapshot: verified, config, ruleIds: RULE_IDS.filter((id) => id !== 'resource_zone') },
+  ];
+  for (const policy of cases) {
+    const { tables, api } = setup(policy);
+    tables.notes[1].body = '변조됨';
+    const out = await call(api.restore, { authorization: 'Bearer b', query: { noteId: NOTE_B }, body: { confirm: true } });
+    assert.equal(out.status, 409);
+    assert.equal(out.body.error, 'POLICY_UNVERIFIED');
+    assert.equal(tables.notes[1].body, '변조됨');
+    assert.equal(tables.audit_log.at(-1).action, 'restore_refused');
+  }
+});
+
+test('10단계: 바뀐 내용이 없으면 확인해도 쓰지 않는다', async () => {
+  const { tables, api } = setup();
+  const out = await call(api.restore, { authorization: 'Bearer b', query: { noteId: NOTE_B }, body: { confirm: true } });
+  assert.equal(out.status, 200);
+  assert.equal(out.body.restored, false);
+  assert.equal(out.body.before, 'unchanged');
+  assert.equal(tables.audit_log.length, 1);
 });

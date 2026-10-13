@@ -150,13 +150,26 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 
 ## 10단계 기록: 백업에서 자료실을 되살립니다
 
-- 제작 1(정책 차이): `policy/verified-policy.json`은 침해 전에 검증한 안전 정책 사본입니다(정책 버전, 판정기 규칙 이름, 경로·구역 표, SHA-256). `npm run policy:diff`는 사본을 다시 읽어 해시를 검증한 뒤 지금 시험 정책(`aleph.config.json`의 `allowedRoutes` + `src/decider.mjs`의 `RULE_IDS`)과의 차이만 보여 줍니다. 사본이 없거나 형식·해시가 틀리면 중단합니다. 실제 운영 정책(반 엔진·Supabase)은 건드리지 않습니다.
+- 제작 1(정책 차이): `policy/verified-policy.json`은 침해 전에 검증한 안전 정책 사본입니다(정책 버전, 판정기 규칙 이름, 경로·구역 표, SHA-256). `npm run policy:diff`는 사본을 다시 읽어 해시를 검증한 뒤 복원할 정책 버전과 지금 시험 정책(`aleph.config.json`의 `allowedRoutes` + `src/decider.mjs`의 `RULE_IDS`)과의 차이만 보여 줍니다. 사본이 없거나 형식·해시가 틀리면 중단합니다. 실제 운영 정책(반 엔진·Supabase)은 건드리지 않습니다.
 - 제작 2(정책 되돌리기): `npm run policy:restore`는 바뀔 항목만 보여 주고 멈추며, `npm run policy:restore -- --apply`일 때만 사본의 서비스(notes·notices) 경로 표를 되돌립니다. 사본에 없는 다른 서비스 경로는 그대로 두고, `policy/audit.jsonl`에 한 줄을 덧붙입니다(기존 줄은 고치지 않음). 규칙 이름이 다르면 코드 변경이라 자동으로 고치지 않고 멈춥니다(git으로 `src/decider.mjs`를 되돌림).
-- 제작 3(메모 한 건 복원): 서비스 `notes`, 경로 `POST /api/restore/:noteId`(서버 함수 `api/restore/[noteId].js`, `aleph.config.json`의 `restoreRoute`).
-  - 사본: `supabase/step10-backup.sql`의 트리거가 메모가 처음 만들어질 때 ID·소유자·제목·본문·내용 해시(제목+U+001F+본문의 SHA-256)를 `note_snapshots`에 남깁니다. 서버는 사본을 읽기만 합니다. 기존 메모도 실행 시점 내용으로 사본을 남겼습니다.
-  - 절차: 로그인 확인 → 사본을 다시 읽어 해시 검증(없으면 404 `NO_SNAPSHOT`, 틀리면 409 `SNAPSHOT_INVALID`로 멈춤) → 사본 소유자가 본인이 아니면 403 → 그 한 건만 사본 내용으로 되돌림(지워졌으면 같은 ID·소유자로 다시 만듦) → 복원한 행의 ID·소유자·내용 해시를 사본과 대조 → `audit_log`에 한 줄 덧붙임(본문·토큰은 넣지 않음). 다른 메모와 기존 감사 기록은 건드리지 않습니다.
-  - 응답 예: `200 { id, restored: true, before: 'modified'|'deleted'|'unchanged', contentSha256, matches: { id, owner, contentSha256 } }`.
-  - 확인은 시험 계정 B의 메모로만 합니다(B가 만든 메모를 고치거나 지운 뒤 B로 복원 호출).
+- 제작 3(메모 한 건 복원): 서비스 `notes`, 경로 `POST /api/restore/:noteId`(서버 함수 `api/restore/[noteId].js`, `aleph.config.json`의 `restoreRoute`). 시험 계정 B의 메모로만 확인합니다.
+
+### 10단계 복원 절차
+
+**1) 복원 전에 사본을 다시 읽어 검증합니다.** 요청마다 아래를 순서대로 하고, 하나라도 실패하면 아무것도 쓰지 않고 멈춥니다. 검증 실패는 감사 기록에 `restore_refused`로 남기고 성공으로 적지 않습니다.
+1. 안전 정책 사본(`policy/verified-policy.json`)을 다시 읽어 해시를 검증하고, 지금 시험 정책과 차이가 없는지 봅니다. 사본이 없거나 해시가 틀리거나 정책이 바뀌었으면 409 `POLICY_UNVERIFIED`.
+2. 메모 사본(`note_snapshots`)을 다시 읽습니다. 없으면 404 `NO_SNAPSHOT`, 사본 소유자가 본인이 아니면 403 `not_owner`, 사본 내용 해시가 맞지 않으면 409 `SNAPSHOT_INVALID`.
+3. 지금 메모가 다른 사람 소유로 바뀌어 있으면 403으로 멈춥니다.
+
+**2) 실행 전에 버전과 바뀔 항목을 보여 줍니다.** 본문 없이(또는 `confirm` 없이) 부르면 미리 보기만 하고 쓰지 않습니다.
+- 응답: `200 { id, dryRun: true, restored: false, before: 'modified'|'deleted'|'unchanged', changes: ['title','body'] 등, version: { policyRevision, policySha256, snapshotSha256, capturedAt } }`.
+- 바뀐 내용이 없으면(`unchanged`) 확인해도 쓰지 않습니다.
+
+**3) 확인한 뒤 지정한 한 건만 되돌립니다.** 같은 경로에 `{ "confirm": true }`를 보내면 그 한 건만 사본 내용으로 되돌립니다(지워졌으면 같은 ID·소유자로 다시 만듦). 다른 메모와 다른 서비스 규칙은 건드리지 않습니다.
+
+**4) 복원한 한 건을 사본과 대조합니다.** 다시 읽은 값의 ID·소유자·내용 해시(제목+U+001F+본문의 SHA-256, DB와 같은 규칙)를 사본과 비교합니다. 하나라도 다르면 500 `RESTORE_MISMATCH`로 실패를 알리고 성공으로 적지 않습니다. 결과는 `audit_log`에 한 줄 덧붙입니다(기존 기록은 고치거나 지우지 않음, 본문·토큰은 넣지 않음).
+
+- 사본: `supabase/step10-backup.sql`의 트리거가 메모가 처음 만들어질 때 ID·소유자·제목·본문·내용 해시를 `note_snapshots`에 남깁니다. 서버는 사본을 읽기만 하고(고치기·지우기 권한 없음), 감사 기록은 읽기·덧붙이기만 합니다. 기존 메모 5건도 실행 시점 내용으로 사본을 남겼고, 5건 모두 해시 검증을 통과했습니다.
 - 제작 4(복구 뒤 재시험 순서): 아래 순서대로 다시 실행합니다. 결과 칸은 실제로 실행한 것만 적습니다.
 
 | 순서 | 요청 | 기대 | 결과 |
@@ -168,7 +181,8 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 | 5 | `/data.json`, 공개 키로 원본 `/rest/v1/notes`·`note_snapshots`·`audit_log` | 404 / 권한 오류 | 실행(cfc6aa7 배포): 404, 세 테이블 모두 401 |
 | 6 | A로 로그인해 내 메모 목록·추가·수정·삭제 | 정상 | 미실행(학생 직접 확인) |
 | 7 | B로 A의 메모 읽기·고치기·지우기·복원 | 403 | 미실행(심판 공격으로 확인) |
-| 8 | B로 자기 메모를 고치거나 지운 뒤 `POST /api/restore/:id` | 200, 사본과 같은 ID·소유자·해시 | 미실행(심판 공격으로 확인) |
+| 8 | B로 자기 메모를 고치거나 지운 뒤 `POST /api/restore/:id`(미리 보기) → `{ "confirm": true }` | 미리 보기 200(버전·바뀔 항목), 확인 후 200(사본과 같은 ID·소유자·해시) | 미실행(심판 공격으로 확인, 로컬 test:restore는 통과) |
 | 9 | 판정기: 미등록 기기 거부, 복합 이상 추가 확인, 전체 목록·공지 거부 | deny / step_up / deny | 실행: test:decider 통과 |
 
+- 첫 제출 판정(28be121, 48점, `S10_BACKUP_UNVERIFIED`): 메모 복원 경로가 실행 전에 버전과 바뀔 항목을 보여 주지 않고 바로 덮어썼고, 복원 전에 안전 정책 사본을 다시 검증하지 않았습니다. 미리 보기 → 확인(`confirm`) 두 단계로 바꾸고 요청마다 정책 사본을 다시 검증하게 했습니다.
 - 남은 약점: 사본은 메모가 처음 만들어질 때 한 번만 남기므로, 정상적으로 고친 내용도 복원하면 처음 내용으로 돌아갑니다. 사본 테이블 자체의 백업과 정기 복원 시험은 아직 없습니다.

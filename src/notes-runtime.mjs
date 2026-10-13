@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import config from '../aleph.config.json' with { type: 'json' };
+import verifiedPolicy from '../policy/verified-policy.json' with { type: 'json' };
+import { RULE_IDS } from './decider.mjs';
 import { createNoticesApi, createNotesApi } from './notes-api.mjs';
 import { createRestoreApi } from './restore-api.mjs';
 import { createLoginVerifier } from './verify-login.mjs';
@@ -19,7 +21,8 @@ function getApis(env) {
   cached = {
     notes: createNotesApi({ verifyLogin, supabase }),
     notices: createNoticesApi({ verifyLogin, supabase }),
-    restore: createRestoreApi({ verifyLogin, supabase }),
+    restore: createRestoreApi({ verifyLogin, supabase,
+      policy: { snapshot: verifiedPolicy, config, ruleIds: RULE_IDS } }),
   };
   return cached;
 }

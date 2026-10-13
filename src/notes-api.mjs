@@ -7,7 +7,7 @@ const MAX_BODY = 5000;
 export const send = (response, status, body) => response.status(status).json(body);
 const publicNote = (row) => ({ id: row.id, title: row.title, body: row.body });
 
-function readBody(request) {
+export function readBody(request) {
   const raw = request.body;
   if (raw && typeof raw === 'object' && !Array.isArray(raw)) return raw;
   if (typeof raw === 'string') {
