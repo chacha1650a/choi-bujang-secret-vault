@@ -163,9 +163,9 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 |---|---|---|---|
 | 1 | `npm run policy:diff` | 차이 없음 | 실행: 차이 없음 |
 | 2 | 로컬 시험 `npm run test:restore`·`test:decider`·`test:notes`·`test:detect`·`decider:test`·`detect:test` | 모두 통과 | 실행: 모두 통과 |
-| 3 | 토큰 없이 `GET /api/my/notes`, `GET /api/notes`, `POST /api/restore/:noteId` | 401 JSON | 배포 후 실행 예정 |
-| 4 | 엉터리 토큰으로 `GET /api/my/notes` | 401 JSON | 배포 후 실행 예정 |
-| 5 | `/data.json`, 공개 키로 원본 `/rest/v1/notes` | 404 / 권한 오류 | 배포 후 실행 예정 |
+| 3 | 토큰 없이 `GET /api/my/notes`, `GET /api/notes`, `POST /api/restore/:noteId` | 401 JSON | 실행(cfc6aa7 배포): 모두 401, 복원 경로 GET은 405 |
+| 4 | 엉터리 토큰으로 `POST /api/restore/:noteId` | 401 JSON | 실행(cfc6aa7 배포): 401 `UNAUTHENTICATED` |
+| 5 | `/data.json`, 공개 키로 원본 `/rest/v1/notes`·`note_snapshots`·`audit_log` | 404 / 권한 오류 | 실행(cfc6aa7 배포): 404, 세 테이블 모두 401 |
 | 6 | A로 로그인해 내 메모 목록·추가·수정·삭제 | 정상 | 미실행(학생 직접 확인) |
 | 7 | B로 A의 메모 읽기·고치기·지우기·복원 | 403 | 미실행(심판 공격으로 확인) |
 | 8 | B로 자기 메모를 고치거나 지운 뒤 `POST /api/restore/:id` | 200, 사본과 같은 ID·소유자·해시 | 미실행(심판 공격으로 확인) |
