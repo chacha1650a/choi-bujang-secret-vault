@@ -351,6 +351,112 @@
       "reasons": [
         "원격 조회 구문(CVE-2021-44228 형태) · Wazuh 수준 10"
       ]
+    },
+    {
+      "id": "xdr_block.persistence.203.0.113.12",
+      "moduleKey": "persistence",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "203.0.113.12",
+      "createdAt": "2026-10-13T07:04:31.647Z",
+      "expiresAt": "2026-10-13T08:04:31.647Z",
+      "evidenceAlertIds": [
+        "ps-01",
+        "ps-02"
+      ],
+      "reasons": [
+        "임시 폴더 실행 파일을 가리키는 서비스·예약 작업 · Wazuh 수준 12"
+      ]
+    },
+    {
+      "id": "xdr_block.persistence.198.51.100.12",
+      "moduleKey": "persistence",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "198.51.100.12",
+      "createdAt": "2026-10-13T07:04:31.647Z",
+      "expiresAt": "2026-10-13T08:04:31.647Z",
+      "evidenceAlertIds": [
+        "ps-03"
+      ],
+      "reasons": [
+        "시작 폴더의 목록 밖 프로그램 · Wazuh 수준 11"
+      ]
+    },
+    {
+      "id": "xdr_block.persistence.192.0.2.12",
+      "moduleKey": "persistence",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "192.0.2.12",
+      "createdAt": "2026-10-13T07:04:31.647Z",
+      "expiresAt": "2026-10-13T08:04:31.647Z",
+      "evidenceAlertIds": [
+        "ps-04"
+      ],
+      "reasons": [
+        "서명 없는 서비스 등록 반복 · Wazuh 수준 12"
+      ]
+    },
+    {
+      "id": "xdr_block.persistence.203.0.113.19",
+      "moduleKey": "persistence",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "203.0.113.19",
+      "createdAt": "2026-10-13T07:04:31.647Z",
+      "expiresAt": "2026-10-13T08:04:31.647Z",
+      "evidenceAlertIds": [
+        "ps-05"
+      ],
+      "reasons": [
+        "임시 폴더 실행 파일을 가리키는 서비스·예약 작업 · Wazuh 수준 10"
+      ]
+    },
+    {
+      "id": "xdr_block.persistence.198.51.100.19",
+      "moduleKey": "persistence",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "198.51.100.19",
+      "createdAt": "2026-10-13T07:04:31.647Z",
+      "expiresAt": "2026-10-13T08:04:31.647Z",
+      "evidenceAlertIds": [
+        "ps-06"
+      ],
+      "reasons": [
+        "임시 폴더 실행 파일을 가리키는 서비스·예약 작업 · Wazuh 수준 12"
+      ]
+    },
+    {
+      "id": "xdr_block.persistence.192.0.2.19",
+      "moduleKey": "persistence",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "192.0.2.19",
+      "createdAt": "2026-10-13T07:04:31.647Z",
+      "expiresAt": "2026-10-13T08:04:31.647Z",
+      "evidenceAlertIds": [
+        "ps-07"
+      ],
+      "reasons": [
+        "임시 폴더 실행 파일을 가리키는 서비스·예약 작업 · Wazuh 수준 11"
+      ]
+    },
+    {
+      "id": "xdr_block.persistence.203.0.113.33",
+      "moduleKey": "persistence",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "203.0.113.33",
+      "createdAt": "2026-10-13T07:04:31.647Z",
+      "expiresAt": "2026-10-13T08:04:31.647Z",
+      "evidenceAlertIds": [
+        "ps-08"
+      ],
+      "reasons": [
+        "임시 폴더 실행 파일을 가리키는 서비스·예약 작업 · Wazuh 수준 12"
+      ]
     }
   ]
 }

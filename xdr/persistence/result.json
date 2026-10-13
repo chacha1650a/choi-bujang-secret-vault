@@ -1,0 +1,155 @@
+{
+  "schema": "aleph.xdr.result.v1",
+  "moduleKey": "persistence",
+  "decisions": [
+    {
+      "alertId": "ps-01",
+      "action": "block",
+      "confidence": 0.92,
+      "reason": "임시 폴더 실행 파일을 가리키는 서비스·예약 작업 · Wazuh 수준 12"
+    },
+    {
+      "alertId": "ps-02",
+      "action": "block",
+      "confidence": 0.92,
+      "reason": "임시 폴더 실행 파일을 가리키는 서비스·예약 작업 · Wazuh 수준 12"
+    },
+    {
+      "alertId": "ps-03",
+      "action": "block",
+      "confidence": 0.9,
+      "reason": "시작 폴더의 목록 밖 프로그램 · Wazuh 수준 11"
+    },
+    {
+      "alertId": "ps-04",
+      "action": "block",
+      "confidence": 0.92,
+      "reason": "서명 없는 서비스 등록 반복 · Wazuh 수준 12"
+    },
+    {
+      "alertId": "ps-05",
+      "action": "block",
+      "confidence": 0.88,
+      "reason": "임시 폴더 실행 파일을 가리키는 서비스·예약 작업 · Wazuh 수준 10"
+    },
+    {
+      "alertId": "ps-06",
+      "action": "block",
+      "confidence": 0.92,
+      "reason": "임시 폴더 실행 파일을 가리키는 서비스·예약 작업 · Wazuh 수준 12"
+    },
+    {
+      "alertId": "ps-07",
+      "action": "block",
+      "confidence": 0.9,
+      "reason": "임시 폴더 실행 파일을 가리키는 서비스·예약 작업 · Wazuh 수준 11"
+    },
+    {
+      "alertId": "ps-08",
+      "action": "block",
+      "confidence": 0.92,
+      "reason": "임시 폴더 실행 파일을 가리키는 서비스·예약 작업 · Wazuh 수준 12"
+    },
+    {
+      "alertId": "ps-09",
+      "action": "alert",
+      "confidence": 0.64,
+      "reason": "서명 확인 안 된 새 예약 작업·시작 항목, 서비스·시작 항목·예약 작업 변경 한 번 · Wazuh 수준 6"
+    },
+    {
+      "alertId": "ps-10",
+      "action": "alert",
+      "confidence": 0.68,
+      "reason": "서명 확인 안 된 새 예약 작업·시작 항목, 서비스·시작 항목·예약 작업 변경 한 번 · Wazuh 수준 7"
+    },
+    {
+      "alertId": "ps-11",
+      "action": "alert",
+      "confidence": 0.6,
+      "reason": "서비스·시작 항목·예약 작업 변경 한 번 · Wazuh 수준 5"
+    },
+    {
+      "alertId": "ps-12",
+      "action": "alert",
+      "confidence": 0.64,
+      "reason": "서명 확인 안 된 새 예약 작업·시작 항목, 서비스·시작 항목·예약 작업 변경 한 번 · Wazuh 수준 6"
+    },
+    {
+      "alertId": "ps-13",
+      "action": "alert",
+      "confidence": 0.78,
+      "reason": "임시 폴더 실행 파일을 가리키는 서비스·예약 작업 · Wazuh 수준 8"
+    },
+    {
+      "alertId": "ps-14",
+      "action": "alert",
+      "confidence": 0.64,
+      "reason": "서비스·시작 항목·예약 작업 변경 한 번 · Wazuh 수준 6"
+    },
+    {
+      "alertId": "ps-15",
+      "action": "alert",
+      "confidence": 0.68,
+      "reason": "서명 확인 안 된 새 예약 작업·시작 항목, 서비스·시작 항목·예약 작업 변경 한 번 · Wazuh 수준 7"
+    },
+    {
+      "alertId": "ps-16",
+      "action": "alert",
+      "confidence": 0.6,
+      "reason": "서비스·시작 항목·예약 작업 변경 한 번 · Wazuh 수준 5"
+    },
+    {
+      "alertId": "ps-17",
+      "action": "record",
+      "confidence": 0.11,
+      "reason": "맞는 공격 패턴 없음 · Wazuh 수준 3"
+    },
+    {
+      "alertId": "ps-18",
+      "action": "record",
+      "confidence": 0.08,
+      "reason": "맞는 공격 패턴 없음 · Wazuh 수준 2"
+    },
+    {
+      "alertId": "ps-19",
+      "action": "record",
+      "confidence": 0.3,
+      "reason": "서비스·시작 항목·예약 작업 변경 한 번 · Wazuh 수준 3"
+    },
+    {
+      "alertId": "ps-20",
+      "action": "record",
+      "confidence": 0.3,
+      "reason": "서비스·시작 항목·예약 작업 변경 한 번 · Wazuh 수준 2"
+    },
+    {
+      "alertId": "ps-21",
+      "action": "record",
+      "confidence": 0.11,
+      "reason": "맞는 공격 패턴 없음 · Wazuh 수준 3"
+    },
+    {
+      "alertId": "ps-22",
+      "action": "record",
+      "confidence": 0.11,
+      "reason": "맞는 공격 패턴 없음 · Wazuh 수준 3"
+    },
+    {
+      "alertId": "ps-23",
+      "action": "record",
+      "confidence": 0.3,
+      "reason": "서비스·시작 항목·예약 작업 변경 한 번 · Wazuh 수준 2"
+    },
+    {
+      "alertId": "ps-24",
+      "action": "record",
+      "confidence": 0.11,
+      "reason": "맞는 공격 패턴 없음 · Wazuh 수준 3"
+    }
+  ],
+  "counts": {
+    "block": 8,
+    "alert": 8,
+    "record": 8
+  }
+}

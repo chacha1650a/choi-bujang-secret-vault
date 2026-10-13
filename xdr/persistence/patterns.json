@@ -1,0 +1,70 @@
+{
+  "schema": "aleph.xdr.patterns.v1",
+  "moduleKey": "persistence",
+  "mitre": ["T1543", "T1053"],
+  "patterns": [
+    {
+      "id": "ps-temp-service-task",
+      "name": "임시 폴더 실행 파일을 가리키는 서비스·예약 작업",
+      "tier": "strong",
+      "condition": "서비스·예약 작업 경보(T1543/T1053)의 실행 파일이 사용자 임시 폴더(Temp, /tmp)에 있음",
+      "evidence": "MITRE ATT&CK T1543.003 Windows Service·T1053.005 Scheduled Task: 임시 폴더의 서명 없는 프로그램을 재시작 뒤에도 실행되게 심는 공격",
+      "when": { "all": [
+        { "field": "data.path", "regex": "[\\\\/](temp|tmp)[\\\\/][^\\\\/]+\\.(exe|dll|ps1|bat|cmd|vbs|js|sh)$|^/dev/shm/" },
+        { "field": "rule.mitre", "includesAny": ["T1543", "T1543.003", "T1053", "T1053.005"] }
+      ] }
+    },
+    {
+      "id": "ps-startup-unknown",
+      "name": "시작 폴더의 목록 밖 프로그램",
+      "tier": "strong",
+      "condition": "사용자 시작 폴더(Startup)에 실행 파일이 새로 들어감",
+      "evidence": "MITRE ATT&CK T1547.001 Startup Folder(T1543 계열 지속성): 로그인할 때마다 실행되도록 시작 폴더에 프로그램을 넣는 공격",
+      "when": { "field": "data.path", "regex": "[\\\\/]start menu[\\\\/]programs[\\\\/]startup[\\\\/][^\\\\/]+\\.(exe|dll|ps1|bat|cmd|vbs|js|lnk)$" }
+    },
+    {
+      "id": "ps-unsigned-burst",
+      "name": "서명 없는 서비스 등록 반복",
+      "tier": "strong",
+      "condition": "서명 없는 서비스·예약 작업 등록이 2건 이상 이어짐",
+      "evidence": "MITRE ATT&CK T1543.003 Windows Service: 원격에서 서명 없는 서비스를 연달아 등록하는 지속성 확보",
+      "when": { "all": [
+        { "field": "data.count", "gte": 2 },
+        { "field": "rule.description", "regex": "서명 없는" }
+      ] }
+    },
+    {
+      "id": "ps-new-unsigned-entry",
+      "name": "서명 확인 안 된 새 예약 작업·시작 항목",
+      "tier": "medium",
+      "condition": "예약 작업·시작 항목이 실행 파일을 가리키지만 임시 폴더가 아니고 서명 여부가 확인되지 않음",
+      "evidence": "MITRE ATT&CK T1053 Scheduled Task·T1543 Create or Modify System Process: 수업 도구일 수도 있어 서명과 만든 사람을 확인해야 함",
+      "when": { "all": [
+        { "field": "data.path", "regex": "\\.(exe|dll|ps1|bat|cmd|vbs|js|sh)$" },
+        { "not": { "any": [
+          { "field": "data.path", "regex": "signed" },
+          { "field": "rule.description", "regex": "서명된|기존 " }
+        ] } }
+      ] }
+    },
+    {
+      "id": "ps-service-change",
+      "name": "서비스·시작 항목·예약 작업 변경 한 번",
+      "tier": "medium",
+      "condition": "서비스·시작 폴더·예약 작업이 한 번 바뀌었거나 다시 시작됨",
+      "evidence": "MITRE ATT&CK T1543·T1053: 지속성 위치의 변경은 공격의 흔적일 수 있지만 한 번은 정상 운영과 구분이 필요함",
+      "when": { "field": "rule.description", "regex": "서비스|시작 (폴더|항목|프로그램)|예약 작업" }
+    },
+    {
+      "id": "ps-wazuh-level",
+      "name": "Wazuh 지속성 경보 등급",
+      "tier": "weak",
+      "condition": "Wazuh 규칙 수준 5 이상이고 rule.mitre 에 T1543 또는 T1053 이 붙음",
+      "evidence": "Wazuh 규칙 수준(rule.level)과 MITRE ATT&CK T1543·T1053 표시: 경보 원천이 지속성 확보 시도로 분류한 사건",
+      "when": { "all": [
+        { "field": "rule.level", "gte": 5 },
+        { "field": "rule.mitre", "includesAny": ["T1543", "T1543.003", "T1053", "T1053.005"] }
+      ] }
+    }
+  ]
+}
