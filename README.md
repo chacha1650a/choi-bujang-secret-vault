@@ -241,6 +241,7 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 - 각 줄에 요청 ID(이 화면이 만든 UUID)와 확인 시각이 붙습니다.
 - **서버 점검 기록(화면 맨 위 수치):** `GET /api/checks`(인자 없음)는 `npm run bundle`과 같은 점검 코드(`src/attack-check.mjs`)를 이 배포에 실제로 보내 센 점검 항목·막은 공격·뚫린 공격·실행하지 않은 점검을 돌려주고(60초 동안 기억), 화면은 이 수치를 계산하지 않고 그대로 옮깁니다. 기록을 읽지 못하면 수치를 비워 둡니다.
 - 첫 제출(cb54f50, 30점)에서 심판 runner가 점검 코드를 격리 환경에서 불러오지 못했고(`runner_import_failed`, JSON·내장 모듈 import 때문), 화면 수치가 서버 기록과 달랐으며(`S12_SCREEN_MISMATCH`), 출처 표가 README 아래쪽에 꾸민 글씨로 있었습니다(`S12_SOURCE_MIXED`). 점검 코드를 import 없는 한 파일로 바꾸고, 모든 점검 요청을 배포 주소 한 곳에만 보내게 하고, 화면 수치를 서버 기록에서 그대로 옮기고, 출처 표를 맨 위로 옮겼습니다.
+- 두 번째 제출(8cc37d4, `S12_BUNDLE_UNSUPPORTED`): 제출 묶음은 격리 환경에서 공개 HTTPS 주소로 **GET·HEAD 요청만** 보낼 수 있는데, 점검 2건이 쓰기 요청(복원 `POST`, 수정 `PUT`)이었습니다. 쓰기 요청은 보내지 않고 `not_run`으로 남기며, 서명·승인 없는 요청 거부는 읽기 요청(`GET /api/notes/:id` + 엉터리 토큰)으로 확인합니다. 쓰기 요청 거부는 로컬 시험(`test:restore`·`test:device`)과 작전실 「점검 실행」(브라우저에서 실제 전송)으로 확인합니다.
 
 ### 제작 2: 1~11단계 정상·금지 요청 실측 표 만드는 절차
 
@@ -264,32 +265,33 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 
 ### 실측 결과 (`npm run bundle` → `npm run checks:table`, 실제 배포에 보낸 요청)
 
-점검 시각 2026-10-13T05:05:51.468Z · 커밋 51e93190a617 · 단계 12
+점검 시각 2026-10-13T05:53:28.996Z · 커밋 abfef2e38fbd · 단계 12
 
 | 단계 | 점검 | 기대 | 실제 응답 · 요청 ID | 결과 |
 |---|---|---|---|---|
-| 1 | s01-static-notes | /data.json에 메모가 없음 | HTTP 404; 요청 ID 280dbc0f-2aa2-4c66-8499-a697a1c40efe | 막음(기대대로) |
-| 2 | s02-static-copy | 다른 정적 사본(/notes.json)에 메모가 없음 | HTTP 404; 요청 ID 853f9f50-b9e8-467b-bb8e-2e7e529463a3 | 막음(기대대로) |
-| 3 | s03-unauth-list | 로그인 없는 내 메모 목록은 401·403과 JSON 오류 | HTTP 401; 요청 ID c39b8d23-6c88-483e-810d-053e137f5d1b | 막음(기대대로) |
-| 3 | s03-fake-token | 엉터리 토큰은 401·403과 JSON 오류 | HTTP 401; 요청 ID 839ddee5-19b6-4aff-91e5-403688ff04d9 | 막음(기대대로) |
-| 4 | s04-query-identity | 쿼리로 넣은 신원·역할은 무시 | HTTP 401; 요청 ID c32aabc7-6f06-440b-b99e-8ed594f4f8f7 | 막음(기대대로) |
-| 4 | s04-header-identity | 헤더로 넣은 신원·역할은 무시 | HTTP 401; 요청 ID d01a68fb-fa08-4d6e-89e9-b2f8bc11e734 | 막음(기대대로) |
-| 4 | s04-other-note | 로그인 없이 남의 메모 한 건 조회 거부 | HTTP 401; 요청 ID 87cfc627-cc7a-46f2-9e05-da1d12258536 | 막음(기대대로) |
-| 5 | s05-direct-table | 배포 주소로 원본 표(/rest/v1/notes)를 직접 읽을 수 없음 | HTTP 404; 요청 ID e8b9d894-4080-4cf3-a84b-c3e53d375666 | 막음(기대대로) |
-| 6 | s06-unregistered | 미등록 기기 거부 | HTTP 200; jsonReady=true; 요청 ID 449bb900-8350-4dae-8055-af3355121198 | 막음(기대대로) |
-| 7 | s07-compound | 복합 이상 접속은 추가 확인 | HTTP 200; jsonReady=true; 요청 ID 74bc2ce4-1408-4181-a450-e722947b4778 | 막음(기대대로) |
-| 8 | s08-other-zone | 로그인 없는 강사 공지 조회 거부 | HTTP 401; 요청 ID e3593a51-d47e-4e67-8a51-97bccac2218f | 막음(기대대로) |
-| 8 | s08-unknown-route | 모르는 경로 거부 | HTTP 200; jsonReady=true; 요청 ID fdfa0c1f-7d87-4256-b6b6-0542fa533dac | 막음(기대대로) |
-| 8 | s08-all-notes | 전체 메모 목록 거부 | HTTP 200; jsonReady=true; 요청 ID 29cdeb00-c0b7-463b-9f12-78b94189c649 | 막음(기대대로) |
-| 8 | s08-write-notice | 반 공지 쓰기 거부 | HTTP 200; jsonReady=true; 요청 ID f3d71ea1-9fac-4726-8abd-31ad5eeb07bd | 막음(기대대로) |
-| 9 | s09-burst-read | 조회 폭주는 회수 제안 | HTTP 200; jsonReady=true; 요청 ID a7e91e82-2e2e-4081-a61e-2519d7d042ff | 막음(기대대로) |
-| 10 | s10-restore-unauth | 로그인 없는 복원 요청 거부 | HTTP 401; 요청 ID 1f09bb3a-9ca4-455f-9569-ca47a70b3a8b | 막음(기대대로) |
-| 10 | s10-policy-verified | 검증한 정책 사본과 지금 정책이 같음 | HTTP 200; jsonReady=true; 요청 ID 88bfac72-22f3-417d-ae4c-7be6d168c42a | 막음(기대대로) |
-| 11 | s11-device | 로그인 없는 기기 상태는 승인 전·자료 없음 | HTTP 200; 요청 ID 8f792e8e-4f07-42a4-a0a0-b79dcf6cba43 | 막음(기대대로) |
-| 11 | s11-unsigned-write | 서명·승인 없는 수정 요청 거부 | HTTP 401; 요청 ID 07c85b67-e8d9-4309-a17e-c71b2b7217bd | 막음(기대대로) |
+| 1 | s01-static-notes | /data.json에 메모가 없음 | HTTP 404; 요청 ID b52aa514-043e-4b0b-aa39-5e82938693c0 | 막음(기대대로) |
+| 2 | s02-static-copy | 다른 정적 사본(/notes.json)에 메모가 없음 | HTTP 404; 요청 ID 66810e85-3761-4448-9dd6-f6d86f3682cc | 막음(기대대로) |
+| 3 | s03-unauth-list | 로그인 없는 내 메모 목록은 401·403과 JSON 오류 | HTTP 401; 요청 ID 70fa26a2-bb06-4bf0-ac99-b78fcd1f2b70 | 막음(기대대로) |
+| 3 | s03-fake-token | 엉터리 토큰은 401·403과 JSON 오류 | HTTP 401; 요청 ID f8f4a931-eec6-47c3-ac47-5d2aa901ff3b | 막음(기대대로) |
+| 4 | s04-query-identity | 쿼리로 넣은 신원·역할은 무시 | HTTP 401; 요청 ID 5ee29fd7-ef7f-43ef-9c0f-d2deb59d6e24 | 막음(기대대로) |
+| 4 | s04-header-identity | 헤더로 넣은 신원·역할은 무시 | HTTP 401; 요청 ID 5b96453b-8b4a-4735-854f-efc8e706ef59 | 막음(기대대로) |
+| 4 | s04-other-note | 로그인 없이 남의 메모 한 건 조회 거부 | HTTP 401; 요청 ID 0771fa1c-3672-4389-a0ee-821362dfc073 | 막음(기대대로) |
+| 5 | s05-direct-table | 배포 주소로 원본 표(/rest/v1/notes)를 직접 읽을 수 없음 | HTTP 404; 요청 ID a831a057-38cb-4a82-85eb-a8457cc939d9 | 막음(기대대로) |
+| 6 | s06-unregistered | 미등록 기기 거부 | HTTP 200; jsonReady=true; 요청 ID ebdc0385-4038-4ccb-8fdf-6ce07345ad35 | 막음(기대대로) |
+| 7 | s07-compound | 복합 이상 접속은 추가 확인 | HTTP 200; jsonReady=true; 요청 ID d4c60781-3cc1-4264-9f77-a04d19be181f | 막음(기대대로) |
+| 8 | s08-other-zone | 로그인 없는 강사 공지 조회 거부 | HTTP 401; 요청 ID cf757ead-4d4a-426f-b9b2-ff7063c9e222 | 막음(기대대로) |
+| 8 | s08-unknown-route | 모르는 경로 거부 | HTTP 200; jsonReady=true; 요청 ID 111dea69-91df-4460-b6e7-e58a5e62ea40 | 막음(기대대로) |
+| 8 | s08-all-notes | 전체 메모 목록 거부 | HTTP 200; jsonReady=true; 요청 ID d0d0818b-e067-408c-9f84-b2d97aa2f44a | 막음(기대대로) |
+| 8 | s08-write-notice | 반 공지 쓰기 거부 | HTTP 200; jsonReady=true; 요청 ID 011783d7-7199-4a1f-bb79-d88ccd5c15fc | 막음(기대대로) |
+| 9 | s09-burst-read | 조회 폭주는 회수 제안 | HTTP 200; jsonReady=true; 요청 ID ff16d47d-1159-4bf2-bdfa-87fc35416822 | 막음(기대대로) |
+| 10 | s10-restore-unauth | 로그인 없는 복원 요청 거부 | 요청을 보내지 못함 (POST 쓰기 요청은 제출 묶음에서 보내지 않음(GET·HEAD만 허용)); 요청 ID d47a79e0-d52f-4cec-b0d6-6777bc291467 | 미실행 |
+| 10 | s10-policy-verified | 검증한 정책 사본과 지금 정책이 같음 | HTTP 200; jsonReady=true; 요청 ID d216d500-0405-4ddb-b599-c8af3f2a0764 | 막음(기대대로) |
+| 11 | s11-device | 로그인 없는 기기 상태는 승인 전·자료 없음 | HTTP 200; 요청 ID 6d33544b-db80-4465-bca0-7e7544089b36 | 막음(기대대로) |
+| 11 | s11-unsigned-write | 서명·승인 없는 수정 요청 거부 | 요청을 보내지 못함 (PUT 쓰기 요청은 제출 묶음에서 보내지 않음(GET·HEAD만 허용)); 요청 ID 280275fe-3860-4ae8-a289-88070ac655dd | 미실행 |
+| 11 | s11-unsigned-read | 서명·승인 없는 읽기 요청 거부 | HTTP 401; 요청 ID c8ccd166-e601-4bee-a8b5-da8b04eb54c5 | 막음(기대대로) |
 
-막음 19 · 뚫림 0 · 미실행 0
+막음 18 · 뚫림 0 · 미실행 2
 
-- 같은 시각대 서버 점검 기록(`GET /api/checks`, 작전실 화면 맨 위 수치)도 점검 항목 19 · 막은 공격 19 · 뚫린 공격 0 · 실행하지 않은 점검 0으로 위 표와 같았습니다.
-- 작전실 「점검 실행」(브라우저에서 직접 보낸 22건): 확인함 20 · 뚫림 0 · 미실행 2(로그인·승인 기기가 필요한 정상 요청 2건). 정상 요청은 2026-10-13에 학생이 로그인·기기 승인 후 앱 화면에서 메모 추가·수정·삭제가 정상인 것을 직접 확인했습니다.
+- 미실행 2건은 쓰기 요청(복원 POST, 수정 PUT)이라 제출 묶음 규칙(GET·HEAD만)에 따라 보내지 않은 것입니다. 같은 커밋의 서버 점검 기록(`GET /api/checks`, 작전실 화면 맨 위 수치)도 점검 항목 20 · 막은 공격 18 · 뚫린 공격 0 · 실행하지 않은 점검 2로 위 표와 같았습니다.
+- 작전실 「점검 실행」은 브라우저에서 쓰기 요청까지 실제로 보냅니다(8cc37d4 배포에서 22건: 확인함 20 · 뚫림 0 · 미실행 2, 미실행은 로그인·승인 기기가 필요한 정상 요청). 정상 요청은 2026-10-13에 학생이 로그인·기기 승인 후 앱 화면에서 메모 추가·수정·삭제가 정상인 것을 직접 확인했습니다.
 - 41종 공격 전체는 심판이 보내며 이 저장소에서는 실행하지 않았습니다.
