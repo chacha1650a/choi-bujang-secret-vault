@@ -50,11 +50,12 @@ test('12단계 runner 규칙: 점검 항목은 다섯 값만 갖고 실제 응�
     assert.ok(seen.every(([method]) => ['GET', 'HEAD'].includes(method)));
     const writes = results.filter((item) => ['s10-restore-unauth', 's11-unsigned-write'].includes(item.attackId));
     assert.deepEqual(writes.map((item) => item.result), ['not_run', 'not_run']);
-    assert.ok(writes.every((item) => /GET·HEAD만 허용/u.test(item.observed)));
+    assert.ok(writes.every((item) => item.observed === 'not_run'));
     for (const item of results.filter((x) => !writes.includes(x))) {
       assert.deepEqual(Object.keys(item).sort(), ['attackId', 'expected', 'observed', 'result', 'stage']);
       assert.equal(item.result, 'blocked', item.attackId);
-      assert.match(item.observed, /^HTTP \d{3}.*요청 ID [0-9a-f-]{36}$/u);
+      // 심판이 같은 요청 기록으로 대조할 수 있는 값만 적는다.
+      assert.match(item.observed, /^HTTP \d{3}(; jsonReady=(true|false))?(; jsonArrayLength=\d+)?$/u);
     }
     assert.deepEqual(results.map((item) => item.stage), [...results.map((item) => item.stage)].sort((a, b) => a - b));
     // 예전처럼 설정 객체를 넘겨도 같은 점검을 한다.
@@ -68,7 +69,8 @@ test('12단계 runner 규칙: 점검 항목은 다섯 값만 갖고 실제 응�
     assert.equal(open.find((item) => item.attackId === 's06-unregistered').result, 'breached');
 
     globalThis.fetch = async () => { throw new Error('offline'); };
-    assert.ok((await runAttackChecks('https://student-defense.vercel.app')).every((item) => item.result === 'not_run'));
+    assert.ok((await runAttackChecks('https://student-defense.vercel.app'))
+      .every((item) => item.result === 'not_run' && item.observed === 'not_run'));
     await assert.rejects(runAttackChecks('http://student-defense.vercel.app'));
   } finally {
     globalThis.fetch = originalFetch;

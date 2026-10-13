@@ -45,10 +45,13 @@ async function probe(base, path, { method = 'GET', headers = {}, body, caseId } 
 const denied = (r) => [401, 403, 404].includes(r.status) && !r.hasNotes;
 const refusedJson = (r) => [401, 403].includes(r.status) && typeof r.json?.error === 'string' && !r.hasNotes;
 
+// observed에는 심판이 같은 요청 기록으로 대조할 수 있는 값(HTTP 상태, jsonReady, jsonArrayLength)만 적습니다.
+// 요청을 보내지 않은(또는 보내지 못한) 점검은 observed와 result를 모두 not_run으로 둡니다.
 function attempt(attackId, stage, expected, r, blockedWhen) {
-  if (!r.ran) return { attackId, stage, expected, observed: `요청을 보내지 못함 (${r.error}); 요청 ID ${r.requestId}`, result: 'not_run' };
-  const extra = typeof r.json?.ready === 'boolean' ? `; jsonReady=${r.json.ready}` : '';
-  return { attackId, stage, expected, observed: `HTTP ${r.status}${extra}; 요청 ID ${r.requestId}`,
+  if (!r.ran) return { attackId, stage, expected, observed: 'not_run', result: 'not_run' };
+  const ready = typeof r.json?.ready === 'boolean' ? `; jsonReady=${r.json.ready}` : '';
+  const length = Array.isArray(r.json) ? `; jsonArrayLength=${r.json.length}` : '';
+  return { attackId, stage, expected, observed: `HTTP ${r.status}${ready}${length}`,
     result: blockedWhen(r) ? 'blocked' : 'breached' };
 }
 

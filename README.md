@@ -1,6 +1,9 @@
-# BYTE BACK 방어전 시작 틀 R5
+# 최부장의 비밀창고 자료실 (BYTE BACK 방어전)
 
-이 저장소는 1단계에서 학생 본인이 GitHub 저장소와 Vercel 배포를 만드는 출발점입니다. 포함된 메모 네 건은 가상 자료입니다. 실제 학생 자료, 토큰, 비밀키를 넣지 마세요.
+학생이 BYTE BACK 방어전 1~12단계에서 만든 가상 자료실입니다. 로그인한 사용자가 승인된 기기에서 자기 메모만 다루고, 판정기·탐지 규칙·복구·탈환 작전실로 공격을 막습니다. 메모는 모두 실습용 가상 자료이며 실제 학생 자료, 토큰, 비밀키는 넣지 않습니다.
+
+- 배포 주소: https://choi-bujang-secret-vault-delta.vercel.app
+- 저장소: https://github.com/chacha1650a/choi-bujang-secret-vault
 
 ## 무엇을 누가 만들었나
 
@@ -11,30 +14,7 @@
 | 학생이 만든 것 | 판정기(`src/decider.mjs`), 탐지 규칙(`src/detect.mjs`), 접속 앱 화면(`public/`), 자료실 서버 함수(`api/`), 점검 코드(`src/attack-check.mjs`, `src/rule-check.mjs`), 정책 사본 도구(`scripts/policy.mjs`), DB 설정(`supabase/*.sql`) |
 | 제공 엔진 | ALEPH SDP 엔진. 로그인 세션 확인, 기기 등록과 요청 서명 확인, 판정기 호출과 집행, 회수 집행, 감사 기록 보관은 엔진이 맡습니다. 이 저장소에는 엔진 코드가 없습니다. |
 
-- 이 저장소는 방어전 시작 틀(ChoiTimo/aleph-defense-starter)에서 출발했습니다. 시작 틀이 준 로그인 검증 도우미(`src/verify-login.mjs`)와 묶음·연습 스크립트(`scripts/bundle.mjs` 등)는 학생이 만든 것이 아닙니다.
-- 외부 서비스: Supabase(로그인·DB), Vercel(배포·서버 함수). 비밀값(서버 전용 키 등)은 저장소와 안내에 넣지 않고 Vercel 비밀 입력란에만 둡니다.
-
-## 학생이 하는 일: 세 걸음
-
-1. GitHub 계정을 만듭니다.
-2. 방어전 1단계 카드의 **Deploy** 버튼을 누릅니다. Vercel에 GitHub로 로그인하고, 새 저장소가 **본인 계정의 Public 저장소**인지 확인한 뒤 Deploy를 누릅니다.
-3. 배포가 끝나면 화면에 나온 `https://…vercel.app` 주소를 방어전 1단계 카드에 붙여넣고 제출합니다. 저장소 주소나 설정 파일은 적지 않습니다.
-
-배포가 끝나면 `/`에서 점령된 가상 자료실을 볼 수 있습니다. 1단계에서는 `/data.json`에 같은 가상 메모가 공개되어 있었습니다(2단계에서 옮김). 1단계 접수와 심판 판정은 포털에서 확인합니다.
-
-## 시작 틀의 자동 처리
-
-`vercel.json`은 정적 결과물 `public`을 배포합니다. 빌드 명령 `npm run build`는 Vercel이 제공하는 GitHub 저장소 소유자·이름, 커밋 SHA, 배포 URL을 검증하고 `public/aleph.json`을 생성합니다. 이 값이 없으면 빌드가 실패하므로, 성공한 것처럼 빈 주소를 내보내지 않습니다. `aleph.json`의 내용만으로 저장소 소유권이나 방어 성공을 인정하지 않습니다. 심판이 공개 저장소의 실제 커밋과 배포된 자료를 따로 대조해야 합니다.
-
-`aleph.config.json`의 `repoUrl`과 `publicAppUrl`은 이전 제출 묶음 방식의 자리표시자입니다. 1단계에서는 학생이 편집하지 않습니다. 2단계 이후 코딩 도구가 필요한 설정과 보호 기능을 단계별로 작성합니다. `npm run bundle`과 `bundle-notes.json`도 1단계의 세 걸음에는 포함되지 않습니다.
-
-로컬에서 가상 화면만 확인할 때는 `npm run build -- --local`을 사용합니다. 로컬 실행은 Vercel 배포나 심판 접수를 증명하지 않습니다. 저장소의 `src/attack-check.mjs`는 실제 배포가 된 뒤 `/data.json`을 비로그인으로 요청해 공개 가상 메모의 확인 표시를 읽습니다.
-
-## 다음 단계의 코딩 도구에 전달할 규칙
-
-[AGENTS.md](AGENTS.md)를 먼저 읽히고 한 번에 한 제작 단위만 요청하세요. 2단계부터는 자료 보호를 구현할 때 `public/data.json`을 복사하는 1단계 빌드 흐름도 함께 바꿔야 합니다. 3단계 이후의 로그인, 허용 경로, 5단계의 원본 API 주소, 6단계 이후 정책 규칙은 해당 단계 원고와 계약에 맞춰 추가합니다. 비밀번호·토큰·서버 전용 키·실제 학생 기록을 코드, Git, 제출 묶음에 넣지 않습니다.
-
-`src/decider.mjs`와 `src/detect.mjs`의 로컬 시험은 반 엔진이나 운영 심판의 결과가 아닙니다. 1단계 이후 제출 묶음 계약 `aleph.defense.submission.v2`는 `scripts/bundle.mjs`에 남아 있으며, 코딩 도구가 해당 단계의 최신 배포 주소와 Git 원격을 맞춘 뒤 사용합니다.
+비밀값(서버 전용 키 등)은 저장소와 안내 문서에 넣지 않고 Vercel 비밀 입력란에만 둡니다. 설치·실행·중지·복구 순서는 아래 「12단계 기록」의 「제작 3」에 있습니다.
 
 ## 2단계 기록: 자료를 코드 밖으로 옮깁니다
 
@@ -242,6 +222,7 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 - **서버 점검 기록(화면 맨 위 수치):** `GET /api/checks`(인자 없음)는 `npm run bundle`과 같은 점검 코드(`src/attack-check.mjs`)를 이 배포에 실제로 보내 센 점검 항목·막은 공격·뚫린 공격·실행하지 않은 점검을 돌려주고(60초 동안 기억), 화면은 이 수치를 계산하지 않고 그대로 옮깁니다. 기록을 읽지 못하면 수치를 비워 둡니다.
 - 첫 제출(cb54f50, 30점)에서 심판 runner가 점검 코드를 격리 환경에서 불러오지 못했고(`runner_import_failed`, JSON·내장 모듈 import 때문), 화면 수치가 서버 기록과 달랐으며(`S12_SCREEN_MISMATCH`), 출처 표가 README 아래쪽에 꾸민 글씨로 있었습니다(`S12_SOURCE_MIXED`). 점검 코드를 import 없는 한 파일로 바꾸고, 모든 점검 요청을 배포 주소 한 곳에만 보내게 하고, 화면 수치를 서버 기록에서 그대로 옮기고, 출처 표를 맨 위로 옮겼습니다.
 - 두 번째 제출(8cc37d4, `S12_BUNDLE_UNSUPPORTED`): 제출 묶음은 격리 환경에서 공개 HTTPS 주소로 **GET·HEAD 요청만** 보낼 수 있는데, 점검 2건이 쓰기 요청(복원 `POST`, 수정 `PUT`)이었습니다. 쓰기 요청은 보내지 않고 `not_run`으로 남기며, 서명·승인 없는 요청 거부는 읽기 요청(`GET /api/notes/:id` + 엉터리 토큰)으로 확인합니다. 쓰기 요청 거부는 로컬 시험(`test:restore`·`test:device`)과 작전실 「점검 실행」(브라우저에서 실제 전송)으로 확인합니다.
+- 세 번째 제출(947abef, 38점): 심판이 `observed`에서 HTTP 상태·bodyBytes·jsonArrayLength·jsonReady·method·urlSha256만 대조하는데 요청 ID 문장을 붙였고, 보내지 않은 점검의 `observed`를 `not_run`이 아닌 문장으로 적었습니다. `observed`를 `HTTP 401`, `HTTP 200; jsonReady=true`처럼 대조 가능한 값만 남기고, 보내지 않은 점검은 `not_run`으로 적습니다. README 제목·소개가 시작 틀 문구로 남아 출처가 섞여 보여서, 맨 위를 이 자료실의 소개와 「학생이 만든 것 / 제공 엔진(ALEPH SDP 엔진)」 두 줄 표로 바꾸고 시작 틀 안내는 맨 아래 참고로 옮겼습니다.
 
 ### 제작 2: 1~11단계 정상·금지 요청 실측 표 만드는 절차
 
@@ -263,35 +244,12 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 6. **중지:** Vercel 프로젝트에서 배포를 내리거나(Instant Rollback·일시 중지), 기기 승인을 `revoked`로 바꿉니다. 엔진 쪽 경로 허용을 끄는 일은 엔진 몫입니다.
 7. **복구:** 검사한 커밋으로 되돌려 다시 배포합니다(`git checkout <검사한 커밋>` 뒤 재배포). 정책은 `npm run policy:diff` → `npm run policy:restore -- --apply`, 메모 한 건은 `POST /api/restore/:noteId`(미리 보기 → `{ "confirm": true }`). 복구 뒤에는 위 「제작 2」 절차로 다시 실측합니다.
 
-### 실측 결과 (`npm run bundle` → `npm run checks:table`, 실제 배포에 보낸 요청)
+### 실측 결과
 
-점검 시각 2026-10-13T05:53:28.996Z · 커밋 abfef2e38fbd · 단계 12
+(배포 후 다시 측정해 채웁니다)
 
-| 단계 | 점검 | 기대 | 실제 응답 · 요청 ID | 결과 |
-|---|---|---|---|---|
-| 1 | s01-static-notes | /data.json에 메모가 없음 | HTTP 404; 요청 ID b52aa514-043e-4b0b-aa39-5e82938693c0 | 막음(기대대로) |
-| 2 | s02-static-copy | 다른 정적 사본(/notes.json)에 메모가 없음 | HTTP 404; 요청 ID 66810e85-3761-4448-9dd6-f6d86f3682cc | 막음(기대대로) |
-| 3 | s03-unauth-list | 로그인 없는 내 메모 목록은 401·403과 JSON 오류 | HTTP 401; 요청 ID 70fa26a2-bb06-4bf0-ac99-b78fcd1f2b70 | 막음(기대대로) |
-| 3 | s03-fake-token | 엉터리 토큰은 401·403과 JSON 오류 | HTTP 401; 요청 ID f8f4a931-eec6-47c3-ac47-5d2aa901ff3b | 막음(기대대로) |
-| 4 | s04-query-identity | 쿼리로 넣은 신원·역할은 무시 | HTTP 401; 요청 ID 5ee29fd7-ef7f-43ef-9c0f-d2deb59d6e24 | 막음(기대대로) |
-| 4 | s04-header-identity | 헤더로 넣은 신원·역할은 무시 | HTTP 401; 요청 ID 5b96453b-8b4a-4735-854f-efc8e706ef59 | 막음(기대대로) |
-| 4 | s04-other-note | 로그인 없이 남의 메모 한 건 조회 거부 | HTTP 401; 요청 ID 0771fa1c-3672-4389-a0ee-821362dfc073 | 막음(기대대로) |
-| 5 | s05-direct-table | 배포 주소로 원본 표(/rest/v1/notes)를 직접 읽을 수 없음 | HTTP 404; 요청 ID a831a057-38cb-4a82-85eb-a8457cc939d9 | 막음(기대대로) |
-| 6 | s06-unregistered | 미등록 기기 거부 | HTTP 200; jsonReady=true; 요청 ID ebdc0385-4038-4ccb-8fdf-6ce07345ad35 | 막음(기대대로) |
-| 7 | s07-compound | 복합 이상 접속은 추가 확인 | HTTP 200; jsonReady=true; 요청 ID d4c60781-3cc1-4264-9f77-a04d19be181f | 막음(기대대로) |
-| 8 | s08-other-zone | 로그인 없는 강사 공지 조회 거부 | HTTP 401; 요청 ID cf757ead-4d4a-426f-b9b2-ff7063c9e222 | 막음(기대대로) |
-| 8 | s08-unknown-route | 모르는 경로 거부 | HTTP 200; jsonReady=true; 요청 ID 111dea69-91df-4460-b6e7-e58a5e62ea40 | 막음(기대대로) |
-| 8 | s08-all-notes | 전체 메모 목록 거부 | HTTP 200; jsonReady=true; 요청 ID d0d0818b-e067-408c-9f84-b2d97aa2f44a | 막음(기대대로) |
-| 8 | s08-write-notice | 반 공지 쓰기 거부 | HTTP 200; jsonReady=true; 요청 ID 011783d7-7199-4a1f-bb79-d88ccd5c15fc | 막음(기대대로) |
-| 9 | s09-burst-read | 조회 폭주는 회수 제안 | HTTP 200; jsonReady=true; 요청 ID ff16d47d-1159-4bf2-bdfa-87fc35416822 | 막음(기대대로) |
-| 10 | s10-restore-unauth | 로그인 없는 복원 요청 거부 | 요청을 보내지 못함 (POST 쓰기 요청은 제출 묶음에서 보내지 않음(GET·HEAD만 허용)); 요청 ID d47a79e0-d52f-4cec-b0d6-6777bc291467 | 미실행 |
-| 10 | s10-policy-verified | 검증한 정책 사본과 지금 정책이 같음 | HTTP 200; jsonReady=true; 요청 ID d216d500-0405-4ddb-b599-c8af3f2a0764 | 막음(기대대로) |
-| 11 | s11-device | 로그인 없는 기기 상태는 승인 전·자료 없음 | HTTP 200; 요청 ID 6d33544b-db80-4465-bca0-7e7544089b36 | 막음(기대대로) |
-| 11 | s11-unsigned-write | 서명·승인 없는 수정 요청 거부 | 요청을 보내지 못함 (PUT 쓰기 요청은 제출 묶음에서 보내지 않음(GET·HEAD만 허용)); 요청 ID 280275fe-3860-4ae8-a289-88070ac655dd | 미실행 |
-| 11 | s11-unsigned-read | 서명·승인 없는 읽기 요청 거부 | HTTP 401; 요청 ID c8ccd166-e601-4bee-a8b5-da8b04eb54c5 | 막음(기대대로) |
+## 참고: 출발점과 사용한 외부 서비스
 
-막음 18 · 뚫림 0 · 미실행 2
-
-- 미실행 2건은 쓰기 요청(복원 POST, 수정 PUT)이라 제출 묶음 규칙(GET·HEAD만)에 따라 보내지 않은 것입니다. 같은 커밋의 서버 점검 기록(`GET /api/checks`, 작전실 화면 맨 위 수치)도 점검 항목 20 · 막은 공격 18 · 뚫린 공격 0 · 실행하지 않은 점검 2로 위 표와 같았습니다.
-- 작전실 「점검 실행」은 브라우저에서 쓰기 요청까지 실제로 보냅니다(8cc37d4 배포에서 22건: 확인함 20 · 뚫림 0 · 미실행 2, 미실행은 로그인·승인 기기가 필요한 정상 요청). 정상 요청은 2026-10-13에 학생이 로그인·기기 승인 후 앱 화면에서 메모 추가·수정·삭제가 정상인 것을 직접 확인했습니다.
-- 41종 공격 전체는 심판이 보내며 이 저장소에서는 실행하지 않았습니다.
+- 이 자료실은 과정에서 받은 방어전 시작 틀(ChoiTimo/aleph-defense-starter)의 빈 뼈대에서 출발했습니다. 시작 틀에 들어 있던 로그인 검증 도우미(`src/verify-login.mjs`), 제출 묶음·연습 스크립트(`scripts/bundle.mjs`, `scripts/decider-test.mjs`, `scripts/detect-test.mjs`, `scripts/fixture-7.mjs`), 패키징 양식(`package/`)과 코딩 도구 규칙(`AGENTS.md`)은 그대로 쓰거나 단계 규칙에 맞게 고쳐 썼습니다.
+- 외부 서비스: Supabase(로그인·DB), Vercel(배포·서버 함수).
+- 빌드: `npm run build`는 Vercel이 주는 저장소·커밋·배포 주소를 검증해 `public/aleph.json`을 만듭니다. 로컬 화면 확인은 `npm run build -- --local`.
