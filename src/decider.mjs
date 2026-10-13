@@ -1,4 +1,4 @@
-// ALEPH SDP 엔진이 확인한 요청만 받는 학생 판정기입니다.
+// 학생이 만든 판정기입니다. 제공 엔진(ALEPH SDP 엔진)이 확인한 요청마다 decide(request)를 부르고, 결과대로 허용·거부·추가 확인을 집행합니다.
 // 규칙을 하나씩 추가합니다. 규칙에 해당하지 않는 요청은 모두 거부합니다.
 // 요청 본문의 userId, role, 기기 키, 토큰을 별도로 믿거나 저장하지 마세요.
 export const RULE_IDS = Object.freeze(['device_registered', 'resource_zone', 'step_up_required']);

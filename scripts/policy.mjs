@@ -7,7 +7,7 @@ export { currentPolicy, diffPolicy, policyHash, restoreRoutes, verifySnapshot };
 
 // 10단계: 침해 전에 검증한 안전 정책 사본(policy/verified-policy.json)과 지금 시험 정책을 비교하고 되돌립니다.
 // 시험 정책 = aleph.config.json의 allowedRoutes(경로·구역 표) + src/decider.mjs의 RULE_IDS(규칙 이름).
-// 실제 운영 정책(반 엔진·Supabase)은 건드리지 않습니다. 비밀값은 읽지도 쓰지도 않습니다.
+// 실제 운영 정책(ALEPH SDP 엔진·Supabase)은 건드리지 않습니다. 비밀값은 읽지도 쓰지도 않습니다.
 
 const root = resolve(import.meta.dirname, '..');
 const SNAPSHOT = join(root, 'policy', 'verified-policy.json');

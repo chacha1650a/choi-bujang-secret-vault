@@ -7,12 +7,12 @@
 
 ## 무엇을 누가 만들었나
 
-출처를 두 갈래로 나눕니다.
+출처를 두 갈래로 나눕니다. 이 저장소의 코드는 모두 학생 몫이고, 제공 엔진 코드는 들어 있지 않습니다.
 
 | 출처 | 들어 있는 것 |
 |---|---|
-| 학생이 만든 것 | 판정기(`src/decider.mjs`), 탐지 규칙(`src/detect.mjs`), 접속 앱 화면(`public/`), 자료실 서버 함수(`api/`), 점검 코드(`src/attack-check.mjs`, `src/rule-check.mjs`), 정책 사본 도구(`scripts/policy.mjs`), DB 설정(`supabase/*.sql`) |
-| 제공 엔진 | ALEPH SDP 엔진. 로그인 세션 확인, 기기 등록과 요청 서명 확인, 판정기 호출과 집행, 회수 집행, 감사 기록 보관은 엔진이 맡습니다. 이 저장소에는 엔진 코드가 없습니다. |
+| 학생이 만든 것 | 판정기(`src/decider.mjs`), 탐지 규칙(`src/detect.mjs`), 접속 앱(`public/`: 로그인, 이 기기 승인 요청, 내 메모 화면, 탈환 작전실), 자료실(`api/`, `src/notes-api.mjs`, `src/device-api.mjs`, `src/restore-api.mjs`, `supabase/*.sql`: 내 메모 API, 로그인 토큰 확인, 기기 승인 명단, 한 건 복원, 자료실 감사 기록), 점검 코드(`src/attack-check.mjs`, `src/rule-check.mjs`), 정책 사본 도구(`scripts/policy.mjs`, `policy/`). 자료실의 로그인·DB(Supabase)와 배포(Vercel)는 학생이 직접 구성했습니다. |
+| 제공 엔진 | ALEPH SDP 엔진. 엔진이 요청마다 신원·기기 등록·재로그인을 확인한 뒤 학생 판정기 `decide(request)`를 부르고 결과(허용·거부·추가 확인)를 집행합니다. 엔진이 검증한 사건으로 학생 탐지 규칙 `detect(events)`를 부르고 권한 회수를 집행하며, 요청 서명(mTLS) 확인과 엔진 감사 기록도 엔진이 맡습니다. 엔진이 넘기는 형식은 제공 계약 문서 `docs/DECIDER_REQUEST.md`, `docs/DETECT_EVENTS.md`에 있습니다. 이 저장소에는 엔진 코드가 없습니다. |
 
 비밀값(서버 전용 키 등)은 저장소와 안내 문서에 넣지 않고 Vercel 비밀 입력란에만 둡니다. 설치·실행·중지·복구 순서는 아래 「12단계 기록」의 「제작 3」에 있습니다.
 
@@ -116,7 +116,7 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 
 - 제작 1: 판정기가 접속 정보(`signals`)의 출처를 구분합니다. `none`(실제 경로)은 위치 정보 없음으로 보고 정상값으로 채우지 않습니다. `judge_fixture`(심판의 가상 사건)만 읽고, 이 값은 추가 확인을 요구하는 근거로만 쓰며 허용 근거로는 쓰지 않습니다. 그 밖의 출처나 형식이 틀린 값(`signals`, `recentEvents`)은 믿지 않고 추가 확인으로 보냅니다.
 - 제작 2: `step_up_required` 규칙을 더했습니다. 다른 지역, 처음 보는 네트워크, 새벽 시각(0~5시), 최근 10분 안의 사건 10건 이상 중 하나라도 있으면 `step_up`(이유 코드 `step_up_required`)입니다. 영구 차단하지 않고, 기존 기기 규칙(`device_registered`)은 그대로 먼저 검사합니다.
-- 제작 3: 제공 계약의 재로그인 정보는 엔진이 검증한 `stepUp {verified, authAgeSeconds}`입니다. `verified`가 true이고 다시 로그인한 지 300초 안일 때만 이상 접속을 허용합니다. 이 자료실의 Vercel 서버 함수는 판정기를 부르지 않으므로, 실제 자료의 재로그인 전 차단과 새 요청 허용은 **미실행**입니다(엔진이 연결된 환경에서만 실측). 토큰 원문은 기록하지 않습니다.
+- 제작 3: 제공 계약의 재로그인 정보는 엔진이 검증한 `stepUp {verified, authAgeSeconds}`입니다. `verified`가 true이고 다시 로그인한 지 300초 안일 때만 이상 접속을 허용합니다. 이 자료실의 Vercel 서버 함수는 판정기를 부르지 않으므로, 실제 자료의 재로그인 전 차단과 새 요청 허용은 미실행입니다(엔진이 연결된 환경에서만 실측). 토큰 원문은 기록하지 않습니다.
 - 확인 순서: `npm run decider:test`(4건 통과), `npm run fixture:7`(정상 allow, 복합 이상 step_up), `npm run test:decider`(지역·시각·네트워크·대량 사건, 위조 출처, 재로그인 나이 검사). 모두 가상 요청 연습이며 심판 판정이 아닙니다.
 - 남은 약점: 기준(새벽 시각, 10건)은 고정값이라 사용자별 평소 패턴을 배우지 않습니다. 실제 경로에는 위치 정보가 없어서 지역·네트워크 규칙은 심판의 가상 사건에서만 작동합니다.
 
@@ -138,28 +138,28 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 - 제작 2: 같은 가명 사용자의 `GET`이 어느 10분 구간에서든 120건을 넘으면 폭주 조회로 봅니다(정확히 120건은 아님). 다른 사용자의 사건은 합산하지 않고, 계약에 없는 지역·네트워크 값은 근거로 쓰지 않으며 지역 하나만으로는 확정하지 않습니다. 평소와 다른 접속(시각·네트워크·지역)은 7단계 판정기의 추가 확인 규칙이 맡습니다.
 - 제작 3: 의심이면 접속 허용/거부 응답과 별도의 결과로 `{ action: 'propose_revocation', reasonCode: 'burst_read', subject }`를 냅니다. 대상은 의심 사용자 한 명(가명)이고, 회수 API를 만들거나 기기 권한을 바꾸지 않습니다. 실제 회수와 경과 시간은 심판이 확인합니다. 정상이면 `{ action: 'observe' }`입니다.
 - 확인 순서: `npm run detect:test`(6건: 정상 30건·120건 유지, 121건·200건 회수 제안, 서로 다른 사용자·10분 밖 흩어짐 유지), `npm run test:detect`(조회 외 요청, 형식 오류, 계약 밖 값 무시, 결과에 다른 값이 없는지). 가상 사건 연습이며 실제 접속 회수나 심판 판정이 아닙니다.
-- 남은 약점: 기준(10분·120건)이 고정값입니다. 회수 제안을 실제로 집행하고 회수된 세션의 재시도를 막는 일은 반 엔진 몫이라 이 저장소에서는 확인하지 않았습니다.
+- 남은 약점: 기준(10분·120건)이 고정값입니다. 회수 제안을 실제로 집행하고 회수된 세션의 재시도를 막는 일은 ALEPH SDP 엔진 몫이라 이 저장소에서는 확인하지 않았습니다.
 
 ## 10단계 기록: 백업에서 자료실을 되살립니다
 
-- 제작 1(정책 차이): `policy/verified-policy.json`은 침해 전에 검증한 안전 정책 사본입니다(정책 버전, 판정기 규칙 이름, 경로·구역 표, SHA-256). `npm run policy:diff`는 사본을 다시 읽어 해시를 검증한 뒤 복원할 정책 버전과 지금 시험 정책(`aleph.config.json`의 `allowedRoutes` + `src/decider.mjs`의 `RULE_IDS`)과의 차이만 보여 줍니다. 사본이 없거나 형식·해시가 틀리면 중단합니다. 실제 운영 정책(반 엔진·Supabase)은 건드리지 않습니다.
+- 제작 1(정책 차이): `policy/verified-policy.json`은 침해 전에 검증한 안전 정책 사본입니다(정책 버전, 판정기 규칙 이름, 경로·구역 표, SHA-256). `npm run policy:diff`는 사본을 다시 읽어 해시를 검증한 뒤 복원할 정책 버전과 지금 시험 정책(`aleph.config.json`의 `allowedRoutes` + `src/decider.mjs`의 `RULE_IDS`)과의 차이만 보여 줍니다. 사본이 없거나 형식·해시가 틀리면 중단합니다. 실제 운영 정책(ALEPH SDP 엔진·Supabase)은 건드리지 않습니다.
 - 제작 2(정책 되돌리기): `npm run policy:restore`는 바뀔 항목만 보여 주고 멈추며, `npm run policy:restore -- --apply`일 때만 사본의 서비스(notes·notices) 경로 표를 되돌립니다. 사본에 없는 다른 서비스 경로는 그대로 두고, `policy/audit.jsonl`에 한 줄을 덧붙입니다(기존 줄은 고치지 않음). 규칙 이름이 다르면 코드 변경이라 자동으로 고치지 않고 멈춥니다(git으로 `src/decider.mjs`를 되돌림).
 - 제작 3(메모 한 건 복원): 서비스 `notes`, 경로 `POST /api/restore/:noteId`(서버 함수 `api/restore/[noteId].js`, `aleph.config.json`의 `restoreRoute`). 시험 계정 B의 메모로만 확인합니다.
 
 ### 10단계 복원 절차
 
-**1) 복원 전에 사본을 다시 읽어 검증합니다.** 요청마다 아래를 순서대로 하고, 하나라도 실패하면 아무것도 쓰지 않고 멈춥니다. 검증 실패는 감사 기록에 `restore_refused`로 남기고 성공으로 적지 않습니다.
+1) 복원 전에 사본을 다시 읽어 검증합니다. 요청마다 아래를 순서대로 하고, 하나라도 실패하면 아무것도 쓰지 않고 멈춥니다. 검증 실패는 감사 기록에 `restore_refused`로 남기고 성공으로 적지 않습니다.
 1. 안전 정책 사본(`policy/verified-policy.json`)을 다시 읽어 해시를 검증하고, 지금 시험 정책과 차이가 없는지 봅니다. 사본이 없거나 해시가 틀리거나 정책이 바뀌었으면 409 `POLICY_UNVERIFIED`.
 2. 메모 사본(`note_snapshots`)을 다시 읽습니다. 없으면 404 `NO_SNAPSHOT`, 사본 소유자가 본인이 아니면 403 `not_owner`, 사본 내용 해시가 맞지 않으면 409 `SNAPSHOT_INVALID`.
 3. 지금 메모가 다른 사람 소유로 바뀌어 있으면 403으로 멈춥니다.
 
-**2) 실행 전에 버전과 바뀔 항목을 보여 줍니다.** 본문 없이(또는 `confirm` 없이) 부르면 미리 보기만 하고 쓰지 않습니다.
+2) 실행 전에 버전과 바뀔 항목을 보여 줍니다. 본문 없이(또는 `confirm` 없이) 부르면 미리 보기만 하고 쓰지 않습니다.
 - 응답: `200 { id, dryRun: true, restored: false, before: 'modified'|'deleted'|'unchanged', changes: ['title','body'] 등, version: { policyRevision, policySha256, snapshotSha256, capturedAt } }`.
 - 바뀐 내용이 없으면(`unchanged`) 확인해도 쓰지 않습니다.
 
-**3) 확인한 뒤 지정한 한 건만 되돌립니다.** 같은 경로에 `{ "confirm": true }`를 보내면 그 한 건만 사본 내용으로 되돌립니다(지워졌으면 같은 ID·소유자로 다시 만듦). 다른 메모와 다른 서비스 규칙은 건드리지 않습니다.
+3) 확인한 뒤 지정한 한 건만 되돌립니다. 같은 경로에 `{ "confirm": true }`를 보내면 그 한 건만 사본 내용으로 되돌립니다(지워졌으면 같은 ID·소유자로 다시 만듦). 다른 메모와 다른 서비스 규칙은 건드리지 않습니다.
 
-**4) 복원한 한 건을 사본과 대조합니다.** 다시 읽은 값의 ID·소유자·내용 해시(제목+U+001F+본문의 SHA-256, DB와 같은 규칙)를 사본과 비교합니다. 하나라도 다르면 500 `RESTORE_MISMATCH`로 실패를 알리고 성공으로 적지 않습니다. 결과는 `audit_log`에 한 줄 덧붙입니다(기존 기록은 고치거나 지우지 않음, 본문·토큰은 넣지 않음).
+4) 복원한 한 건을 사본과 대조합니다. 다시 읽은 값의 ID·소유자·내용 해시(제목+U+001F+본문의 SHA-256, DB와 같은 규칙)를 사본과 비교합니다. 하나라도 다르면 500 `RESTORE_MISMATCH`로 실패를 알리고 성공으로 적지 않습니다. 결과는 `audit_log`에 한 줄 덧붙입니다(기존 기록은 고치거나 지우지 않음, 본문·토큰은 넣지 않음).
 
 - 사본: `supabase/step10-backup.sql`의 트리거가 메모가 처음 만들어질 때 ID·소유자·제목·본문·내용 해시를 `note_snapshots`에 남깁니다. 서버는 사본을 읽기만 하고(고치기·지우기 권한 없음), 감사 기록은 읽기·덧붙이기만 합니다. 기존 메모 5건도 실행 시점 내용으로 사본을 남겼고, 5건 모두 해시 검증을 통과했습니다.
 - 제작 4(복구 뒤 재시험 순서): 아래 순서대로 다시 실행합니다. 결과 칸은 실제로 실행한 것만 적습니다.
@@ -183,13 +183,13 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 
 - 제작 1(설치형 웹앱): `public/manifest.json`(앱 이름 「최부장의 비밀창고 자료실」, standalone, 아이콘 `public/icon.svg`)과 오프라인 안내(`public/offline.html`, 서비스 워커 `public/sw.js`)를 붙였습니다. 서비스 워커는 화면 이동이 네트워크에서 실패할 때 오프라인 안내만 보여 주고, 메모·API 응답·토큰은 저장하지 않습니다. 화면에 「앱 설치 표시만으로는 기기 확인이 끝나지 않는다」고 적었습니다. 따로 설치하는 접속 프로그램은 없습니다.
 - 제작 2(기기 승인 흐름):
-  - `POST /api/device/request`(로그인한 학생): 서버가 무작위 기기 ID(16자리 16진수, 개인키 아님)를 만들어 **HttpOnly·Secure·SameSite=Strict 쿠키**(`Path=/api`)로만 주고, DB(`device_registrations`, `supabase/step11-devices.sql`)에는 그 해시와 `pending` 상태만 남깁니다. 요청만으로는 승인되지 않습니다.
+  - `POST /api/device/request`(로그인한 학생): 서버가 무작위 기기 ID(16자리 16진수, 개인키 아님)를 만들어 HttpOnly·Secure·SameSite=Strict 쿠키(`Path=/api`)로만 주고, DB(`device_registrations`, `supabase/step11-devices.sql`)에는 그 해시와 `pending` 상태만 남깁니다. 요청만으로는 승인되지 않습니다.
   - 승인·회수는 서버 코드가 아니라 강사가 SQL Editor에서 상태를 `approved`/`revoked`로 바꿀 때만 됩니다(서버 전용 키에는 읽기·넣기 권한만 있음).
   - `GET /api/device/status`: 서버가 확인한 승인 여부만 돌려줍니다. 로그인 없이도 200 `{ approved: false }`이고 자료는 넣지 않습니다.
-  - 보호 자료 API(`/api/my/notes`, `/api/notes`, `/api/notes/:id`, `/api/notices*`, `/api/restore/:noteId`)는 로그인한 학생 계정과 이 기기가 **서버 명단에서 승인된 짝**일 때만 처리하고, 아니면 403 `DEVICE_NOT_APPROVED`입니다. 그래서 기기 쿠키가 없는 직접 요청(서명·승인 없이 보내는 보호 요청)에는 자료가 나가지 않습니다.
+  - 보호 자료 API(`/api/my/notes`, `/api/notes`, `/api/notes/:id`, `/api/notices*`, `/api/restore/:noteId`)는 로그인한 학생 계정과 이 기기가 서버 명단에서 승인된 짝일 때만 처리하고, 아니면 403 `DEVICE_NOT_APPROVED`입니다. 그래서 기기 쿠키가 없는 직접 요청(서명·승인 없이 보내는 보호 요청)에는 자료가 나가지 않습니다.
   - 화면은 로그인 뒤 서버에 승인 여부를 묻고, 승인된 경우에만 자료실(메모 목록·편집)을 엽니다. 승인 전에는 메모를 요청하지도 보여 주지도 않습니다.
   - 로그인 토큰은 브라우저 저장소에 넣지 않고 창의 메모리에만 둡니다(`persistSession: false`). 새로고침하면 다시 로그인합니다. 기기 ID 쿠키는 자바스크립트가 읽을 수 없습니다.
-- 요청 서명: 설치형 앱의 요청 서명(경로·본문 변경 탐지)은 반 엔진의 mTLS 릴레이가 검증합니다. 이 저장소에는 엔진의 서명·기기 승인 계약이 없어서(`docs/DECIDER_REQUEST.md`) 서명을 직접 검증하지 않고, 승인되지 않은 기기의 요청에는 자료를 주지 않는 것으로 막습니다. 판정기에는 `GET /api/device/status`, `POST /api/device/request` 두 경로만 `device` 구역으로 더했습니다.
+- 요청 서명: 설치형 앱의 요청 서명(경로·본문 변경 탐지)은 ALEPH SDP 엔진의 mTLS 릴레이가 검증합니다. 이 저장소에는 엔진의 서명·기기 승인 계약이 없어서(`docs/DECIDER_REQUEST.md`) 서명을 직접 검증하지 않고, 승인되지 않은 기기의 요청에는 자료를 주지 않는 것으로 막습니다. 판정기에는 `GET /api/device/status`, `POST /api/device/request` 두 경로만 `device` 구역으로 더했습니다.
 - 정책 사본: 경로 표가 바뀌어 `npm run policy:diff`가 차이 두 줄을 보였고, 검토 후 `npm run policy:snapshot -- 2`로 버전 2 사본을 새로 남겼습니다(같거나 낮은 버전으로는 덮어쓰지 않음, `policy/audit.jsonl`에 기록).
 - 확인 순서: `npm run test:device`(상태 응답, 승인 요청·쿠키, 승인 전 자료 없음, 승인 후 정상, manifest·저장소 미사용), 기존 `test:notes`·`test:restore`·`test:decider`. 배포 후: 로그인 없이 `GET /api/device/status` → 200 `approved: false`, A로 로그인 → 승인 요청 → (SQL로 승인) → 「승인 상태 다시 확인」 → 자료실 열림.
 - 남은 약점: 기기 ID는 쿠키라서 같은 브라우저 프로필을 복사하면 따라갈 수 있습니다. 요청 서명은 엔진에 맡겼고, 승인은 SQL로만 합니다.
@@ -215,14 +215,14 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 ### 제작 1: 탈환 작전실 화면
 
 첫 화면 아래 「탈환 작전실」에서 「점검 실행」을 누르면 다음을 한 표로 보여 줍니다. 결과는 응답 상태로만 정하고, 보내지 못한 시험은 「미실행」으로 둡니다. 메모 본문·토큰은 표시하지 않습니다(정상 조회는 건수만).
-- **금지 요청(실제 전송):** `/data.json`, 토큰 없음·엉터리 토큰·쿼리 신원으로 `/api/my/notes`, 공개 키로 원본 `/rest/v1/notes`, `/api/notices`, `POST /api/restore/:id`, 서명·승인 없는 `PUT /api/notes/:id`.
-- **판정기 규칙·탐지 사건·복구 버전:** 서버 `GET /api/checks?case=…`가 고정된 가상 입력 11건(6~10단계 정상·금지)을 지금 실행한 결과. 판정(`allow`/`deny`/`step_up`), 탐지(`propose_revocation`/`observe`), 정책 사본 버전.
-- **회수 상태·정상 요청:** 로그인했으면 이 기기의 승인 상태(`approved`/`approval_pending`/`device_revoked`)를, 승인된 기기면 내 메모 조회(건수만)를 실제로 보냅니다. 아니면 미실행.
+- 금지 요청(실제 전송): `/data.json`, 토큰 없음·엉터리 토큰·쿼리 신원으로 `/api/my/notes`, 공개 키로 원본 `/rest/v1/notes`, `/api/notices`, `POST /api/restore/:id`, 서명·승인 없는 `PUT /api/notes/:id`.
+- 판정기 규칙·탐지 사건·복구 버전: 서버 `GET /api/checks?case=…`가 고정된 가상 입력 11건(6~10단계 정상·금지)을 지금 실행한 결과. 판정(`allow`/`deny`/`step_up`), 탐지(`propose_revocation`/`observe`), 정책 사본 버전.
+- 회수 상태·정상 요청: 로그인했으면 이 기기의 승인 상태(`approved`/`approval_pending`/`device_revoked`)를, 승인된 기기면 내 메모 조회(건수만)를 실제로 보냅니다. 아니면 미실행.
 - 각 줄에 요청 ID(이 화면이 만든 UUID)와 확인 시각이 붙습니다.
-- **서버 점검 기록(화면 맨 위 수치):** `GET /api/checks`(인자 없음)는 `npm run bundle`과 같은 점검 코드(`src/attack-check.mjs`)를 이 배포에 실제로 보내 센 점검 항목·막은 공격·뚫린 공격·실행하지 않은 점검을 돌려주고(60초 동안 기억), 화면은 이 수치를 계산하지 않고 그대로 옮깁니다. 기록을 읽지 못하면 수치를 비워 둡니다.
-- 첫 제출(cb54f50, 30점)에서 심판 runner가 점검 코드를 격리 환경에서 불러오지 못했고(`runner_import_failed`, JSON·내장 모듈 import 때문), 화면 수치가 서버 기록과 달랐으며(`S12_SCREEN_MISMATCH`), 출처 표가 README 아래쪽에 꾸민 글씨로 있었습니다(`S12_SOURCE_MIXED`). 점검 코드를 import 없는 한 파일로 바꾸고, 모든 점검 요청을 배포 주소 한 곳에만 보내게 하고, 화면 수치를 서버 기록에서 그대로 옮기고, 출처 표를 맨 위로 옮겼습니다.
-- 두 번째 제출(8cc37d4, `S12_BUNDLE_UNSUPPORTED`): 제출 묶음은 격리 환경에서 공개 HTTPS 주소로 **GET·HEAD 요청만** 보낼 수 있는데, 점검 2건이 쓰기 요청(복원 `POST`, 수정 `PUT`)이었습니다. 쓰기 요청은 보내지 않고 `not_run`으로 남기며, 서명·승인 없는 요청 거부는 읽기 요청(`GET /api/notes/:id` + 엉터리 토큰)으로 확인합니다. 쓰기 요청 거부는 로컬 시험(`test:restore`·`test:device`)과 작전실 「점검 실행」(브라우저에서 실제 전송)으로 확인합니다.
-- 세 번째 제출(947abef, 38점): 심판이 `observed`에서 HTTP 상태·bodyBytes·jsonArrayLength·jsonReady·method·urlSha256만 대조하는데 요청 ID 문장을 붙였고, 보내지 않은 점검의 `observed`를 `not_run`이 아닌 문장으로 적었습니다. `observed`를 `HTTP 401`, `HTTP 200; jsonReady=true`처럼 대조 가능한 값만 남기고, 보내지 않은 점검은 `not_run`으로 적습니다. README 제목·소개가 시작 틀 문구로 남아 출처가 섞여 보여서, 맨 위를 이 자료실의 소개와 「학생이 만든 것 / 제공 엔진(ALEPH SDP 엔진)」 두 줄 표로 바꾸고 시작 틀 안내는 맨 아래 참고로 옮겼습니다.
+- 서버 점검 기록(화면 맨 위 수치): `GET /api/checks`(인자 없음)는 `npm run bundle`과 같은 점검 코드(`src/attack-check.mjs`)를 이 배포에 실제로 보내 센 점검 항목·막은 공격·뚫린 공격·실행하지 않은 점검을 돌려주고(60초 동안 기억), 화면은 이 수치를 계산하지 않고 그대로 옮깁니다. 기록을 읽지 못하면 수치를 비워 둡니다.
+- 점검 코드는 심판 격리 환경에서 그대로 불러올 수 있게 import 없는 한 파일이고, 모든 점검 요청을 배포 주소 한 곳에만 보냅니다.
+- 제출 묶음은 공개 HTTPS 주소로 GET·HEAD 요청만 보냅니다. 쓰기 요청이 필요한 점검 2건(복원 `POST`, 수정 `PUT`)은 보내지 않고 `observed`와 `result`를 `not_run`으로 남기며, 서명·승인 없는 요청 거부는 읽기 요청(`GET /api/notes/:id` + 엉터리 토큰)으로 확인합니다. 쓰기 요청 거부는 로컬 시험(`test:restore`·`test:device`)과 작전실 「점검 실행」(브라우저에서 실제 전송)으로 확인합니다.
+- `observed`에는 심판이 같은 요청 기록으로 대조할 수 있는 값(`HTTP 401`, `HTTP 200; jsonReady=true`처럼 HTTP 상태와 jsonReady·jsonArrayLength)만 적습니다.
 
 ### 제작 2: 1~11단계 정상·금지 요청 실측 표 만드는 절차
 
@@ -236,13 +236,13 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 
 검사한 커밋은 `npm run bundle` 결과의 `commit` 값입니다. 비밀값(서버 전용 키 등)은 저장소와 이 안내에 넣지 않습니다.
 
-1. **설치:** `git clone https://github.com/chacha1650a/choi-bujang-secret-vault && cd choi-bujang-secret-vault && git checkout <검사한 커밋> && npm ci` (Node.js 22 이상).
-2. **DB 준비(Supabase SQL Editor, 순서대로):** `supabase/schema.sql` → `migrate-step3.sql` → `rls-step4.sql` → `rls-step5.sql` → `step8-notices.sql` → `step10-backup.sql` → `step11-devices.sql`. 이메일이 들어가는 시험 계정 SQL은 저장소에 없습니다(로컬 전용).
-3. **실행:** Vercel 새 프로젝트에 이 저장소를 연결하고 환경변수 이름 `SUPABASE_URL`, `SUPABASE_SECRET_KEY`의 값은 Vercel 비밀 입력란에만 넣은 뒤 배포합니다(`vercel.json`: 빌드 `npm run build`, 공개 폴더 `public`). 로컬 확인: `npm run test:notes`·`test:restore`·`test:device`·`test:decider`·`test:detect`·`test:checks`·`test:r5`, `npm run decider:test`, `npm run detect:test`, `npm run policy:diff`.
-4. **판정기·탐지 규칙:** 엔진(ALEPH SDP 엔진)이 `src/decider.mjs`의 `decide(request)`와 `src/detect.mjs`의 `detect(events)`를 부릅니다. 가상 입력 확인은 `GET /api/checks`.
-5. **접속 앱:** 배포 주소를 열어 로그인 → 「이 기기 승인 요청」 → 강사가 `supabase/step11-devices.sql`의 안내대로 그 한 건만 승인 → 「승인 상태 다시 확인」.
-6. **중지:** Vercel 프로젝트에서 배포를 내리거나(Instant Rollback·일시 중지), 기기 승인을 `revoked`로 바꿉니다. 엔진 쪽 경로 허용을 끄는 일은 엔진 몫입니다.
-7. **복구:** 검사한 커밋으로 되돌려 다시 배포합니다(`git checkout <검사한 커밋>` 뒤 재배포). 정책은 `npm run policy:diff` → `npm run policy:restore -- --apply`, 메모 한 건은 `POST /api/restore/:noteId`(미리 보기 → `{ "confirm": true }`). 복구 뒤에는 위 「제작 2」 절차로 다시 실측합니다.
+1. 설치: `git clone https://github.com/chacha1650a/choi-bujang-secret-vault && cd choi-bujang-secret-vault && git checkout <검사한 커밋> && npm ci` (Node.js 22 이상).
+2. DB 준비(Supabase SQL Editor, 순서대로): `supabase/schema.sql` → `migrate-step3.sql` → `rls-step4.sql` → `rls-step5.sql` → `step8-notices.sql` → `step10-backup.sql` → `step11-devices.sql`. 이메일이 들어가는 시험 계정 SQL은 저장소에 없습니다(로컬 전용).
+3. 실행: Vercel 새 프로젝트에 이 저장소를 연결하고 환경변수 이름 `SUPABASE_URL`, `SUPABASE_SECRET_KEY`의 값은 Vercel 비밀 입력란에만 넣은 뒤 배포합니다(`vercel.json`: 빌드 `npm run build`, 공개 폴더 `public`). 빌드는 Vercel이 주는 저장소·커밋·배포 주소를 검증해 `public/aleph.json`을 만들고, 로컬 화면 확인은 `npm run build -- --local`입니다. 로컬 확인: `npm run test:notes`·`test:restore`·`test:device`·`test:decider`·`test:detect`·`test:checks`·`test:r5`, `npm run decider:test`, `npm run detect:test`, `npm run policy:diff`.
+4. 판정기·탐지 규칙: ALEPH SDP 엔진이 `src/decider.mjs`의 `decide(request)`와 `src/detect.mjs`의 `detect(events)`를 부릅니다. 가상 입력 확인은 `GET /api/checks`.
+5. 접속 앱: 배포 주소를 열어 로그인 → 「이 기기 승인 요청」 → 강사가 `supabase/step11-devices.sql`의 안내대로 그 한 건만 승인 → 「승인 상태 다시 확인」.
+6. 중지: Vercel 프로젝트에서 배포를 내리거나(Instant Rollback·일시 중지), 기기 승인을 `revoked`로 바꿉니다. ALEPH SDP 엔진 쪽 경로 허용을 끄는 일은 엔진 몫입니다.
+7. 복구: 검사한 커밋으로 되돌려 다시 배포합니다(`git checkout <검사한 커밋>` 뒤 재배포). 정책은 `npm run policy:diff` → `npm run policy:restore -- --apply`, 메모 한 건은 `POST /api/restore/:noteId`(미리 보기 → `{ "confirm": true }`). 복구 뒤에는 위 「제작 2」 절차로 다시 실측합니다.
 
 ### 실측 결과 (`npm run bundle` → `npm run checks:table`, 실제 배포에 보낸 요청)
 
@@ -276,9 +276,3 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 - 미실행 2건은 쓰기 요청(복원 POST, 수정 PUT)이라 제출 묶음 규칙(GET·HEAD만)에 따라 보내지 않은 것입니다. 같은 커밋의 서버 점검 기록(`GET /api/checks`, 작전실 화면 맨 위 수치)도 점검 항목 20 · 막은 공격 18 · 뚫린 공격 0 · 실행하지 않은 점검 2입니다.
 - 작전실 「점검 실행」은 브라우저에서 쓰기 요청까지 실제로 보냅니다(8cc37d4 배포에서 22건: 확인함 20 · 뚫림 0 · 미실행 2, 미실행은 로그인·승인 기기가 필요한 정상 요청). 정상 요청은 2026-10-13에 학생이 로그인·기기 승인 후 앱 화면에서 메모 추가·수정·삭제가 정상인 것을 직접 확인했습니다.
 - 41종 공격 전체는 심판이 보내며 이 저장소에서는 실행하지 않았습니다.
-
-## 참고: 출발점과 사용한 외부 서비스
-
-- 이 자료실은 과정에서 받은 방어전 시작 틀(ChoiTimo/aleph-defense-starter)의 빈 뼈대에서 출발했습니다. 시작 틀에 들어 있던 로그인 검증 도우미(`src/verify-login.mjs`), 제출 묶음·연습 스크립트(`scripts/bundle.mjs`, `scripts/decider-test.mjs`, `scripts/detect-test.mjs`, `scripts/fixture-7.mjs`), 패키징 양식(`package/`)과 코딩 도구 규칙(`AGENTS.md`)은 그대로 쓰거나 단계 규칙에 맞게 고쳐 썼습니다.
-- 외부 서비스: Supabase(로그인·DB), Vercel(배포·서버 함수).
-- 빌드: `npm run build`는 Vercel이 주는 저장소·커밋·배포 주소를 검증해 `public/aleph.json`을 만듭니다. 로컬 화면 확인은 `npm run build -- --local`.
