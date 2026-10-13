@@ -1,0 +1,81 @@
+{
+  "schema": "aleph.xdr.patterns.v1",
+  "moduleKey": "web-injection",
+  "mitre": ["T1190"],
+  "patterns": [
+    {
+      "id": "wi-sql-repeat",
+      "name": "SQL 구문 주입 반복",
+      "tier": "strong",
+      "condition": "요청 인자에 SQL 구문 표기(이어 붙이기·OR 조건·UNION SELECT)가 있고 같은 주소에서 5번 이상 반복",
+      "evidence": "MITRE ATT&CK T1190 Exploit Public-Facing Application: 웹 인자에 SQL 구문을 넣어 데이터베이스 조회를 바꾸는 공격",
+      "when": { "all": [
+        { "field": "data.url", "regex": "doc-sql|doc-mixed|union\\s+(all\\s+)?select|'\\s*or\\s*'?\\d|\\bor\\s+1\\s*=\\s*1|;\\s*drop\\s|sleep\\(|benchmark\\(" },
+        { "field": "data.count", "gte": 5 }
+      ] }
+    },
+    {
+      "id": "wi-script-repeat",
+      "name": "스크립트 삽입 반복",
+      "tier": "strong",
+      "condition": "요청 인자에 스크립트 태그·이벤트 처리기 표기가 있고 같은 주소에서 5번 이상 반복",
+      "evidence": "MITRE ATT&CK T1190 Exploit Public-Facing Application: 공개 웹 화면에 스크립트를 심어 실행시키는 공격",
+      "when": { "all": [
+        { "field": "data.url", "regex": "doc-script|doc-mixed|<\\s*script|javascript:|onerror\\s*=|onload\\s*=" },
+        { "field": "data.count", "gte": 5 }
+      ] }
+    },
+    {
+      "id": "wi-traversal-repeat",
+      "name": "경로 거슬러 올라가기 반복",
+      "tier": "strong",
+      "condition": "파일 경로 인자에 상위 폴더 이동(../) 표기가 여러 단계 있고 같은 주소에서 5번 이상 반복",
+      "evidence": "MITRE ATT&CK T1190 Exploit Public-Facing Application: 경로 이탈로 웹 앱 밖의 파일을 읽으려는 공격",
+      "when": { "all": [
+        { "field": "data.url", "regex": "doc-up-repeat|(\\.\\.[\\\\/]){2,}|(%2e%2e(%2f|%5c)){2,}" },
+        { "field": "data.count", "gte": 5 }
+      ] }
+    },
+    {
+      "id": "wi-command-repeat",
+      "name": "명령 구분자 주입 반복",
+      "tier": "strong",
+      "condition": "요청 인자에 명령 구분자 뒤 시스템 명령 표기가 있고 같은 주소에서 5번 이상 반복",
+      "evidence": "MITRE ATT&CK T1190 Exploit Public-Facing Application: 웹 인자로 서버 명령을 이어 실행시키는 공격",
+      "when": { "all": [
+        { "field": "data.url", "regex": "doc-cmd|[;&|]{1,2}\\s*(cat|ls|id|whoami|wget|curl)\\b|\\$\\(" },
+        { "field": "data.count", "gte": 5 }
+      ] }
+    },
+    {
+      "id": "wi-marker-once",
+      "name": "주입 표기 한 번(반복 없음)",
+      "tier": "medium",
+      "condition": "주입 표기가 있지만 반복이 5번 미만",
+      "evidence": "MITRE ATT&CK T1190 Exploit Public-Facing Application: 주입 시도의 흔적이지만 한 번으로는 오타·시험 입력과 구분이 필요함",
+      "when": { "field": "data.url", "regex": "doc-(sql|script|up|cmd|mixed|one)|union\\s+select|<\\s*script|(\\.\\.[\\\\/]){2,}" }
+    },
+    {
+      "id": "wi-keyword-once",
+      "name": "주입과 비슷한 단어·문자 한 번",
+      "tier": "medium",
+      "condition": "요청 인자나 설명에 sql·select·script·따옴표·구분 문자 같은 단어가 한 번 있음",
+      "evidence": "MITRE ATT&CK T1190 Exploit Public-Facing Application: 주입 구문의 조각과 같은 단어라 사람이 확인해야 함",
+      "when": { "any": [
+        { "field": "data.url", "regex": "\\b(sql|select|union|script)\\b|['\"]|%27|%22|[?&=/]up-" },
+        { "field": "rule.description", "regex": "따옴표|구분 문자|주입처럼|이상한 검색" }
+      ] }
+    },
+    {
+      "id": "wi-wazuh-level",
+      "name": "Wazuh 웹 공격 경보 등급",
+      "tier": "weak",
+      "condition": "Wazuh 규칙 수준 5 이상이고 rule.mitre 에 T1190 이 붙음",
+      "evidence": "Wazuh 규칙 수준(rule.level)과 MITRE ATT&CK T1190 표시: 경보 원천이 공개 웹 앱 악용 시도로 분류한 사건",
+      "when": { "all": [
+        { "field": "rule.level", "gte": 5 },
+        { "field": "rule.mitre", "includesAny": ["T1190"] }
+      ] }
+    }
+  ]
+}

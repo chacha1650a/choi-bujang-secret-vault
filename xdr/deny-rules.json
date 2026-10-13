@@ -137,6 +137,113 @@
       "reasons": [
         "같은 주소 로그인 실패 연속 · Wazuh 수준 12"
       ]
+    },
+    {
+      "id": "xdr_block.web-injection.203.0.113.10",
+      "moduleKey": "web-injection",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "203.0.113.10",
+      "createdAt": "2026-10-13T07:04:29.872Z",
+      "expiresAt": "2026-10-13T08:04:29.872Z",
+      "evidenceAlertIds": [
+        "wi-01",
+        "wi-02"
+      ],
+      "reasons": [
+        "SQL 구문 주입 반복 · Wazuh 수준 12",
+        "스크립트 삽입 반복 · Wazuh 수준 12"
+      ]
+    },
+    {
+      "id": "xdr_block.web-injection.198.51.100.15",
+      "moduleKey": "web-injection",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "198.51.100.15",
+      "createdAt": "2026-10-13T07:04:29.872Z",
+      "expiresAt": "2026-10-13T08:04:29.872Z",
+      "evidenceAlertIds": [
+        "wi-03"
+      ],
+      "reasons": [
+        "경로 거슬러 올라가기 반복 · Wazuh 수준 11"
+      ]
+    },
+    {
+      "id": "xdr_block.web-injection.192.0.2.15",
+      "moduleKey": "web-injection",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "192.0.2.15",
+      "createdAt": "2026-10-13T07:04:29.872Z",
+      "expiresAt": "2026-10-13T08:04:29.872Z",
+      "evidenceAlertIds": [
+        "wi-04"
+      ],
+      "reasons": [
+        "SQL 구문 주입 반복 · Wazuh 수준 12"
+      ]
+    },
+    {
+      "id": "xdr_block.web-injection.203.0.113.18",
+      "moduleKey": "web-injection",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "203.0.113.18",
+      "createdAt": "2026-10-13T07:04:29.872Z",
+      "expiresAt": "2026-10-13T08:04:29.872Z",
+      "evidenceAlertIds": [
+        "wi-05"
+      ],
+      "reasons": [
+        "SQL 구문 주입 반복, 스크립트 삽입 반복 · Wazuh 수준 10"
+      ]
+    },
+    {
+      "id": "xdr_block.web-injection.198.51.100.18",
+      "moduleKey": "web-injection",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "198.51.100.18",
+      "createdAt": "2026-10-13T07:04:29.872Z",
+      "expiresAt": "2026-10-13T08:04:29.872Z",
+      "evidenceAlertIds": [
+        "wi-06"
+      ],
+      "reasons": [
+        "명령 구분자 주입 반복 · Wazuh 수준 11"
+      ]
+    },
+    {
+      "id": "xdr_block.web-injection.192.0.2.21",
+      "moduleKey": "web-injection",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "192.0.2.21",
+      "createdAt": "2026-10-13T07:04:29.872Z",
+      "expiresAt": "2026-10-13T08:04:29.872Z",
+      "evidenceAlertIds": [
+        "wi-07"
+      ],
+      "reasons": [
+        "경로 거슬러 올라가기 반복 · Wazuh 수준 12"
+      ]
+    },
+    {
+      "id": "xdr_block.web-injection.203.0.113.22",
+      "moduleKey": "web-injection",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "203.0.113.22",
+      "createdAt": "2026-10-13T07:04:29.872Z",
+      "expiresAt": "2026-10-13T08:04:29.872Z",
+      "evidenceAlertIds": [
+        "wi-08"
+      ],
+      "reasons": [
+        "SQL 구문 주입 반복 · Wazuh 수준 10"
+      ]
     }
   ]
 }
