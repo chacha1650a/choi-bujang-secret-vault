@@ -111,3 +111,11 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 - `aleph.config.json`의 `originalApiUrl`에 쿼리 없는 원본 자료 주소(`/rest/v1/notes`)를 적었습니다. 공개 키만으로 불러도 메모가 나오면 안 됩니다.
 - `src/attack-check.mjs`에 5단계 점검(공개 키로 원본 API 직접 조회)을 더했습니다.
 - 남은 약점: 로그인용 공개 키가 화면 코드에 있습니다(가점 3은 로그인까지 서버로 옮겨야 해서 하지 않았습니다). 1단계에서 공개된 옛 커밋과 배포 이력에는 메모가 남아 있습니다.
+
+## 6단계 기록: 등록한 기기만 자료실에 들어옵니다
+
+- 제작 1: `docs/DECIDER_REQUEST.md`를 읽고 요청의 `deviceRegistered`(엔진이 확인한 기기 등록 여부)와 `subjectId`·`deviceId`(가명 ID, 개인키 아님)의 위치를 확인했습니다. 인증서·CA·서명 키는 만들지도 Git에 넣지도 않았습니다.
+- 제작 2: `src/decider.mjs`에 `device_registered` 규칙 하나를 넣었습니다. `deviceRegistered`가 정확히 `true`일 때만 `allow`(`approved`)이고, 아니거나 값이 없으면 `deny`와 이유 코드 `device_not_registered`로 거부합니다. 다른 요청 항목은 읽지 않습니다.
+- 제작 3 확인 순서: `npm run decider:test`를 실행해 「등록 기기의 정상 요청」은 통과(allow), 「미등록 기기의 가상 요청」은 deny·`device_not_registered`로 나오는지 봅니다. 가상 요청 연습이며 심판 판정이 아닙니다. 미등록 기기 공격은 심판이 확인합니다. 따로 설치하는 접속 프로그램은 없습니다.
+- 기존 자료실 주소와 브라우저 화면, 서버 함수는 바꾸지 않았습니다.
+- 남은 약점: 규칙이 기기 등록 여부 하나뿐입니다. 평소와 다른 접속 확인(7단계)과 구역 나누기(8단계)는 아직 없습니다.
