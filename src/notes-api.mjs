@@ -166,8 +166,8 @@ export function createNotesApi({ verifyLogin, supabase }) {
   return { collection, item };
 }
 
-// 8단계: 강사 공지 구역. 로그인한 사람은 읽을 수 있고, 수정은 DB의 강사 명단에 있는 학생 계정만 합니다.
-// 화면 메뉴·요청 본문·토큰의 role은 믿지 않습니다. 심판 시험 신원은 강사 명단에 없으므로 수정할 수 없습니다.
+// 8단계: 강사 공지 구역. 읽기와 수정 모두 DB의 강사 명단에 있는 학생 계정만 합니다. 일반 학생에게는 다른 구역입니다.
+// 화면 메뉴·요청 본문·토큰의 role은 믿지 않습니다. 심판 시험 신원은 강사 명단에 없으므로 접근할 수 없습니다.
 export function createNoticesApi({ verifyLogin, supabase }) {
   const guarded = createGuard(verifyLogin);
 
@@ -180,8 +180,12 @@ export function createNoticesApi({ verifyLogin, supabase }) {
   }
 
   async function collection(request, response) {
-    await guarded(request, response, ['GET'], async () => {
+    await guarded(request, response, ['GET'], async (who) => {
       response.setHeader('X-Resource-Id', resourceId('notices', 'class'));
+      if (!(await isInstructor(who))) {
+        forbid(response, 'instructor_only', '강사 공지 구역입니다.');
+        return;
+      }
       const { data, error } = await supabase.from('notices').select('id, title, body')
         .order('created_at');
       if (error) throw error;
@@ -197,8 +201,8 @@ export function createNoticesApi({ verifyLogin, supabase }) {
         return;
       }
       response.setHeader('X-Resource-Id', resourceId('notice', id.toLowerCase()));
-      if (request.method === 'PUT' && !(await isInstructor(who))) {
-        forbid(response, 'instructor_only', '강사만 공지를 고칠 수 있습니다.');
+      if (!(await isInstructor(who))) {
+        forbid(response, 'instructor_only', '강사 공지 구역입니다.');
         return;
       }
       if (request.method === 'GET') {

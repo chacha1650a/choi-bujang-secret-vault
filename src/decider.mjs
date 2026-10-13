@@ -5,16 +5,15 @@ export const RULE_IDS = Object.freeze(['device_registered', 'resource_zone', 'st
 
 // 8단계: 구역별로 허용하는 정확한 경로입니다. 표에 없는 메서드·경로는 모두 거부합니다.
 // 경로는 자료 ID 한 칸만 고르고, 쿼리로 기능을 고르지 않습니다. 메모의 소유자는 자료 API가 다시 확인합니다.
-// 공지 수정(PUT /notices/:id)은 강사 역할이 이 계약에 없어서 판정기에서는 허용하지 않습니다.
+// 강사 공지 구역(/notices)은 강사 역할이 이 계약에 없어서 판정기에서는 읽기·수정 모두 허용하지 않습니다.
 const SEGMENT = '[A-Za-z0-9_-]{1,64}';
+const NOTE_SERVICE = 'notes';
 const ZONES = Object.freeze({
   'GET /notes': { zone: 'note', path: /^\/notes$/u },
   'POST /notes': { zone: 'note', path: /^\/notes$/u },
   'GET /notes/:id': { zone: 'note', path: new RegExp(`^/notes/${SEGMENT}$`, 'u') },
   'PUT /notes/:id': { zone: 'note', path: new RegExp(`^/notes/${SEGMENT}$`, 'u') },
   'DELETE /notes/:id': { zone: 'note', path: new RegExp(`^/notes/${SEGMENT}$`, 'u') },
-  'GET /notices': { zone: 'notice', path: /^\/notices$/u },
-  'GET /notices/:id': { zone: 'notice', path: new RegExp(`^/notices/${SEGMENT}$`, 'u') },
 });
 const stripApi = (value) => value.replace(/^\/api(?=\/)/u, '');
 
@@ -73,7 +72,8 @@ function readEvents(events) {
 
 // 8단계: 엔진이 확인한 사용자·기기·메서드·경로·자원 경로 모양이 구역 표와 정확히 맞는지 봅니다.
 function zoneOf(request) {
-  const { subjectId, deviceId, method, path, route, queryLength } = request;
+  const { subjectId, deviceId, service, method, path, route, queryLength } = request;
+  if (service !== NOTE_SERVICE) return null;
   if (typeof subjectId !== 'string' || !subjectId || typeof deviceId !== 'string'
       || !/^[0-9a-f]{16}$/u.test(deviceId) || typeof method !== 'string'
       || typeof path !== 'string' || typeof route !== 'string' || queryLength !== 0) {

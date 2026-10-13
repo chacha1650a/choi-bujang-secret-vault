@@ -62,14 +62,24 @@ const setup = () => {
     notes: createNotesApi({ verifyLogin, supabase }) };
 };
 
-test('8단계: 공지는 로그인해야 읽고, 메모와 다른 자원 ID를 갖는다', async () => {
+test('8단계: 공지 구역은 강사 명단 계정만 읽고, 메모와 다른 자원 ID를 갖는다', async () => {
   const { notices, notes } = setup();
   assert.equal((await call(notices.collection, {})).status, 401);
-  const list = await call(notices.collection, { authorization: 'Bearer b' });
+  for (const authorization of ['Bearer a', 'Bearer b', 'Bearer judge']) {
+    const list = await call(notices.collection, { authorization });
+    assert.equal(list.status, 403);
+    assert.equal(list.body.reason, 'instructor_only');
+    assert.equal(JSON.stringify(list.body).includes('가상 공지'), false);
+    const one = await call(notices.item, { authorization, query: { id: NOTICE } });
+    assert.equal(one.status, 403);
+    assert.equal(JSON.stringify(one.body).includes('가상 공지'), false);
+  }
+  const list = await call(notices.collection, { authorization: 'Bearer teacher' });
   assert.equal(list.status, 200);
   assert.equal(list.body.length, 1);
   assert.equal(list.headers['x-resource-id'], 'notices:class');
-  const one = await call(notices.item, { authorization: 'Bearer b', query: { id: NOTICE } });
+  const one = await call(notices.item, { authorization: 'Bearer teacher', query: { id: NOTICE } });
+  assert.equal(one.status, 200);
   assert.equal(one.headers['x-resource-id'], `notice:${NOTICE}`);
   const mine = await call(notes.item, { authorization: 'Bearer a', query: { id: NOTE } });
   assert.equal(mine.headers['x-resource-id'], `note:${NOTE}`);
