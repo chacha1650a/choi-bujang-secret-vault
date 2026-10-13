@@ -8,6 +8,7 @@ import { createGuard, send } from './notes-api.mjs';
 
 export const DEVICE_COOKIE = 'aleph_device';
 const DEVICE_ID = /^[0-9a-f]{16}$/u;
+const MAX_PENDING = 3;
 const hashDevice = (deviceId) => createHash('sha256').update(deviceId, 'utf8').digest('hex');
 
 export function deviceIdFrom(request) {
@@ -73,6 +74,14 @@ export function createDeviceApi({ verifyLogin, supabase }) {
       const existing = await registration(supabase, who, deviceId);
       if (existing) {
         send(response, 200, { approved: existing.status === 'approved', status: existing.status });
+        return;
+      }
+      // 한 계정이 승인 대기 요청을 끝없이 만들지 못하게 대기 중인 요청 수를 제한합니다.
+      const pending = await supabase.from('device_registrations').select('device_hash')
+        .eq('user_id', who.userId).eq('status', 'pending');
+      if (pending.error) throw pending.error;
+      if ((pending.data?.length ?? 0) >= MAX_PENDING) {
+        send(response, 429, { error: 'TOO_MANY_PENDING', message: '승인 대기 중인 요청이 많습니다. 강사의 승인을 기다려 주세요.' });
         return;
       }
       deviceId = randomBytes(8).toString('hex');

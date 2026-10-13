@@ -201,3 +201,17 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 - 정책 사본: 경로 표가 바뀌어 `npm run policy:diff`가 차이 두 줄을 보였고, 검토 후 `npm run policy:snapshot -- 2`로 버전 2 사본을 새로 남겼습니다(같거나 낮은 버전으로는 덮어쓰지 않음, `policy/audit.jsonl`에 기록).
 - 확인 순서: `npm run test:device`(상태 응답, 승인 요청·쿠키, 승인 전 자료 없음, 승인 후 정상, manifest·저장소 미사용), 기존 `test:notes`·`test:restore`·`test:decider`. 배포 후: 로그인 없이 `GET /api/device/status` → 200 `approved: false`, A로 로그인 → 승인 요청 → (SQL로 승인) → 「승인 상태 다시 확인」 → 자료실 열림.
 - 남은 약점: 기기 ID는 쿠키라서 같은 브라우저 프로필을 복사하면 따라갈 수 있습니다. 요청 서명은 엔진에 맡겼고, 승인은 SQL로만 합니다.
+
+### 11단계 제출 전 보안 점검
+
+| 점검 | 결과 | 조치 |
+|---|---|---|
+| 의존성(`npm audit --omit=dev`) | 취약점 0건 | 없음 |
+| 저장소·커밋 이력의 비밀값(서버 전용 키·토큰·개인키) | 없음 | 없음. 커밋 작성자 정보에는 GitHub 계정 메일이 보임(비밀값 아님) |
+| 인라인 스크립트·다른 사이트의 틀 안 표시 | CSP·frame 제한이 없었음 | 화면 코드를 `public/app.js`로 옮기고 `vercel.json`에 CSP(`script-src 'self' https://cdn.jsdelivr.net`, `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'none'`)·`X-Frame-Options: DENY`·`Referrer-Policy: no-referrer`·`Permissions-Policy` 추가 |
+| 기기 승인 요청 남발 | 한 계정이 대기 요청을 무제한으로 만들 수 있었음 | 계정당 대기 요청 3건까지, 넘으면 429 |
+| 지워진 메모 ID 재사용 | 다른 사람이 지워진 메모의 ID로 새 메모를 만들면 원래 주인이 복원할 수 없었음 | 사본에 남은 ID로는 새 메모를 만들 수 없게 409 |
+| 쿠키만으로 하는 요청 위조(CSRF) | 해당 없음 | 보호 API는 Bearer 토큰과 기기 쿠키가 둘 다 있어야 하고, 쿠키는 SameSite=Strict |
+| 화면 출력(XSS) | 메모·상태 문구는 모두 `textContent`로 넣음, `innerHTML` 없음 | 없음 |
+| 오류 응답 | 내부 오류 내용·키를 내보내지 않고 `SERVER_ERROR`만 응답 | 없음 |
+| DB 직접 접근 | 공개 키로 `notes`·`note_snapshots`·`audit_log`·`device_registrations` 모두 거부 | 없음 |

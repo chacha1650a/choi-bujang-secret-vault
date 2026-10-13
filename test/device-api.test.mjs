@@ -111,6 +111,42 @@ test('11단계: 승인 전에는 로그인해도 메모 API가 자료를 주지 
   assert.equal((await call(notes.mine, { cookie })).status, 401);
 });
 
+test('11단계: 한 계정이 승인 대기 요청을 끝없이 만들 수 없다', async () => {
+  const { tables, device } = setup();
+  for (let i = 0; i < 3; i += 1) {
+    assert.equal((await call(device.request, { method: 'POST', authorization: 'Bearer a' })).status, 201);
+  }
+  assert.equal((await call(device.request, { method: 'POST', authorization: 'Bearer a' })).status, 429);
+  assert.equal(tables.device_registrations.length, 3);
+});
+
+test('11단계: 보안 헤더는 인라인 스크립트와 다른 사이트의 틀 안 표시를 막는다', async () => {
+  const vercel = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8'));
+  const headers = Object.fromEntries(vercel.headers[0].headers.map((h) => [h.key, h.value]));
+  assert.equal(headers['X-Content-Type-Options'], 'nosniff');
+  assert.match(headers['Content-Security-Policy'], /script-src 'self' https:\/\/cdn\.jsdelivr\.net;/u);
+  assert.doesNotMatch(headers['Content-Security-Policy'], /script-src[^;]*unsafe-inline/u);
+  assert.match(headers['Content-Security-Policy'], /frame-ancestors 'none'/u);
+});
+
+test('보완: 지워진 다른 사람 메모의 ID(사본에 남은 ID)로는 새 메모를 만들 수 없다', async () => {
+  const { tables, notes } = setup('approved');
+  const OLD = '55555555-5555-4555-8555-555555555555';
+  tables.note_snapshots = [{ note_id: OLD, owner_id: '99999999-9999-4999-8999-999999999999' }];
+  const reused = await call(notes.collection, { method: 'POST', authorization: 'Bearer a', cookie });
+  assert.equal(reused.status, 400);
+  const make = (body) => new Promise((resolve) => {
+    const out = {};
+    notes.collection({ method: 'POST', headers: { authorization: 'Bearer a', cookie }, body }, {
+      setHeader() {}, status(code) { out.status = code; return this; },
+      json(value) { out.body = value; resolve(out); }, end() { resolve(out); },
+    });
+  });
+  assert.equal((await make({ id: OLD, title: 't', body: 'b' })).status, 409);
+  assert.equal(tables.notes.some((row) => row.id === OLD), false);
+  assert.equal((await make({ title: 't', body: 'b' })).status, 201);
+});
+
 test('11단계: 쿠키의 기기 ID는 형식이 맞을 때만 읽는다', () => {
   assert.equal(deviceIdFrom({ headers: { cookie } }), DEVICE);
   assert.equal(deviceIdFrom({ headers: { cookie: 'aleph_device=../../etc' } }), null);
@@ -122,9 +158,12 @@ test('11단계: 설치형 웹앱 설정과 화면은 토큰·기기 키를 브�
   assert.equal(manifest.display, 'standalone');
   assert.ok(manifest.name && manifest.start_url && manifest.icons.length);
   const html = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
+  const app = await readFile(new URL('../public/app.js', import.meta.url), 'utf8');
   assert.match(html, /rel="manifest"/u);
-  assert.match(html, /persistSession: false/u);
-  assert.doesNotMatch(html.replace(/\/\/.*$/gmu, ''), /localStorage|sessionStorage|indexedDB/u);
+  // 인라인 스크립트가 없어야 CSP(script-src 'self')로 막을 수 있다.
+  assert.doesNotMatch(html, /<script(?![^>]*\bsrc=)[^>]*>/u);
+  assert.match(app, /persistSession: false/u);
+  assert.doesNotMatch(app.replace(/\/\/.*$/gmu, ''), /localStorage|sessionStorage|indexedDB|innerHTML/u);
   const sw = await readFile(new URL('../public/sw.js', import.meta.url), 'utf8');
   assert.doesNotMatch(sw.replace(/\/\/.*$/gmu, ''), /\/api/u);
 });

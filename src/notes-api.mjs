@@ -110,6 +110,15 @@ export function createNotesApi({ verifyLogin, supabase, deviceCheck }) {
         return;
       }
       const id = input.id ? String(input.id).toLowerCase() : randomUUID();
+      // 10단계 보완: 지워진 메모의 ID는 사본에 남아 있습니다. 같은 ID를 다시 쓰면 원래 주인이 복원할 수 없으므로 막습니다.
+      if (input.id) {
+        const used = await supabase.from('note_snapshots').select('note_id').eq('note_id', id).maybeSingle();
+        if (used.error) throw used.error;
+        if (used.data) {
+          send(response, 409, { error: 'ID_EXISTS' });
+          return;
+        }
+      }
       const { error } = await supabase.from('notes')
         .insert({ id, owner_id: who.userId, title: input.title, body: input.body });
       if (error?.code === '23505') {
