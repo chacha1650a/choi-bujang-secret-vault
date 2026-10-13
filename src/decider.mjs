@@ -16,6 +16,11 @@ const ZONES = Object.freeze({
   'DELETE /notes/:id': { zone: 'note', path: new RegExp(`^/notes/${SEGMENT}$`, 'u') },
 });
 const stripApi = (value) => value.replace(/^\/api(?=\/)/u, '');
+// :id 자리에 오면 안 되는 기능 이름입니다. 자료 ID가 아니라 다른 구역·여러 사람 자료를 고르는 경로로 봅니다.
+const FUNCTION_SEGMENTS = new Set(['export', 'exports', 'download', 'all', 'list', 'search', 'bulk',
+  'batch', 'share', 'shared', 'public', 'admin', 'backup', 'dump', 'import', 'sync', 'raw', 'query',
+  'count', 'report', 'stats', 'owner', 'owners', 'user', 'users', 'others', 'any', 'notices', 'notes']);
+const idOf = (path) => path.split('/')[2];
 
 // 7단계: 평소와 다른 접속의 기준입니다. 새벽 시각, 처음 보는 네트워크, 다른 지역, 짧은 시간의 많은 사건.
 const USUAL_REGIONS = new Set(['local', 'unknown']);
@@ -83,7 +88,11 @@ function zoneOf(request) {
   if (space < 0 || route.slice(0, space) !== method) return null;
   const key = `${method} ${stripApi(route.slice(space + 1))}`;
   const rule = Object.hasOwn(ZONES, key) ? ZONES[key] : null;
-  if (!rule || !rule.path.test(stripApi(path))) return null;
+  const target = stripApi(path);
+  if (!rule || !rule.path.test(target)) return null;
+  // 자료 ID 자리에 기능 이름(export 등)이 오면 거부합니다. 대소문자를 바꿔도 같습니다.
+  const id = idOf(target);
+  if (id !== undefined && FUNCTION_SEGMENTS.has(id.toLowerCase())) return null;
   return rule.zone;
 }
 
