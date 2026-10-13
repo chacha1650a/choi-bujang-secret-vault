@@ -15,8 +15,15 @@ function newRequestId() {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20)}`;
 }
 
+// 제출 묶음은 격리 환경에서 공개 HTTPS 주소로 GET·HEAD 요청만 보낼 수 있습니다.
+// 쓰기 요청(POST·PUT 등)이 필요한 점검은 보내지 않고 미실행(not_run)으로 남깁니다.
+const READ_METHODS = new Set(['GET', 'HEAD']);
+
 async function probe(base, path, { method = 'GET', headers = {}, body, caseId } = {}) {
   const requestId = newRequestId();
+  if (!READ_METHODS.has(method)) {
+    return { ran: false, requestId, error: `${method} 쓰기 요청은 제출 묶음에서 보내지 않음(GET·HEAD만 허용)` };
+  }
   try {
     const response = await fetch(new URL(path, base), {
       method, redirect: 'manual', signal: AbortSignal.timeout(10000),
@@ -83,6 +90,8 @@ export async function runAttackChecks(target) {
     (r) => r.status === 200 && r.json?.approved === false && !r.hasNotes);
   await add('s11-unsigned-write', 11, '서명·승인 없는 수정 요청 거부', `/api/notes/${TEST_UUID}`,
     { method: 'PUT', headers: { authorization: FAKE_TOKEN }, body: { title: 'x' } }, refusedJson);
+  await add('s11-unsigned-read', 11, '서명·승인 없는 읽기 요청 거부', `/api/notes/${TEST_UUID}`,
+    { headers: { authorization: FAKE_TOKEN } }, refusedJson);
 
   // 고정된 가상 입력을 배포의 점검 API에서 실행하고, runner가 같은 HTTP 응답을 관측하게 합니다.
   for (const [id, stage, expected] of [

@@ -49,7 +49,9 @@ test('12단계: 서버 점검 기록의 수치는 bundle과 같은 점검을 실
     assert.equal(record.body.total, direct.length);
     assert.equal(record.body.blocked, direct.filter((a) => a.result === 'blocked').length);
     assert.equal(record.body.failed, 0);
-    assert.equal(record.body.notRun, 0);
+    // 쓰기 요청 점검 2건(복원 POST, 수정 PUT)은 제출 묶음 규칙상 보내지 않으므로 미실행입니다.
+    assert.equal(record.body.notRun, direct.filter((a) => a.result === 'not_run').length);
+    assert.equal(record.body.notRun, 2);
     assert.equal(record.body.total, record.body.blocked + record.body.failed + record.body.notRun);
     assert.deepEqual(record.body.attempts.map((a) => a.attackId), direct.map((a) => a.attackId));
     assert.equal(/"(title|body|content)"\s*:/u.test(JSON.stringify(record.body)), false);

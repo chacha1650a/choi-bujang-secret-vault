@@ -46,13 +46,17 @@ test('12단계 runner 규칙: 점검 항목은 다섯 값만 갖고 실제 응�
     };
     const results = await runAttackChecks('https://student-defense.vercel.app');
     assert.ok(results.length >= 15 && results.length <= 20);
-    for (const item of results) {
+    // 제출 묶음은 GET·HEAD만 보낸다. 쓰기 요청 점검은 보내지 않고 미실행으로 남는다.
+    assert.ok(seen.every(([method]) => ['GET', 'HEAD'].includes(method)));
+    const writes = results.filter((item) => ['s10-restore-unauth', 's11-unsigned-write'].includes(item.attackId));
+    assert.deepEqual(writes.map((item) => item.result), ['not_run', 'not_run']);
+    assert.ok(writes.every((item) => /GET·HEAD만 허용/u.test(item.observed)));
+    for (const item of results.filter((x) => !writes.includes(x))) {
       assert.deepEqual(Object.keys(item).sort(), ['attackId', 'expected', 'observed', 'result', 'stage']);
       assert.equal(item.result, 'blocked', item.attackId);
       assert.match(item.observed, /^HTTP \d{3}.*요청 ID [0-9a-f-]{36}$/u);
     }
     assert.deepEqual(results.map((item) => item.stage), [...results.map((item) => item.stage)].sort((a, b) => a - b));
-    assert.ok(seen.some(([method, url]) => method === 'POST' && url.includes('/api/restore/')));
     // 예전처럼 설정 객체를 넘겨도 같은 점검을 한다.
     assert.equal((await runAttackChecks({ ...config, step: 12 })).length, results.length);
 
