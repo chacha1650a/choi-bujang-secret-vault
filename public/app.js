@@ -172,17 +172,28 @@ function row(stage, kind, request, expected, r, okWhen) {
     verdict: okWhen(r) ? 'ok' : 'bad', requestId: r.requestId, at: r.at };
 }
 
+// 서버 점검 API의 고정 가상 입력 사례(src/rule-check.mjs와 같은 목록)입니다.
+const RULE_CASES = [
+  ['s06-registered', 6, '정상', '등록 기기의 내 메모 읽기 허용'], ['s06-unregistered', 6, '금지', '미등록 기기 거부'],
+  ['s07-compound', 7, '금지', '복합 이상 접속은 추가 확인'], ['s07-stepped-up', 7, '정상', '다시 로그인한 복합 이상 접속 허용'],
+  ['s08-unknown-route', 8, '금지', '모르는 경로 거부'], ['s08-all-notes', 8, '금지', '전체 메모 목록 거부'],
+  ['s08-write-notice', 8, '금지', '반 공지 쓰기 거부'], ['s08-own-list', 8, '정상', '내 메모 목록 허용'],
+  ['s09-burst-read', 9, '금지', '10분 안 121건 조회는 회수 제안'], ['s09-normal-read', 9, '정상', '10분 안 120건 조회는 유지'],
+  ['s10-policy-verified', 10, '정상', '검증한 정책 사본과 지금 정책이 같음'],
+];
+
 const skipped = (stage, kind, request, expected, why) => ({ stage, kind, request, expected, actual: why, verdict: 'skip', requestId: '-', at: '-' });
 
 async function runOps() {
   $('ops-run').disabled = true;
-  $('ops-meta').textContent = '점검 중입니다.';
+  $('live-meta').textContent = '점검 중입니다.';
   const rows = [];
   // 금지 요청: 이 화면에서 실제로 보냅니다.
   rows.push(row(1, '금지', 'GET /data.json', '메모 없음(404)', await observe('/data.json'), (r) => r.status === 404 && !r.leaked));
   rows.push(row(3, '금지', 'GET /api/my/notes (토큰 없음)', '401 JSON', await observe('/api/my/notes'), refusedJson));
   rows.push(row(3, '금지', 'GET /api/my/notes (엉터리 토큰)', '401 JSON', await observe('/api/my/notes', { headers: { authorization: FAKE_TOKEN } }), refusedJson));
   rows.push(row(4, '금지', 'GET /api/my/notes?userId=…&role=instructor', '쿼리 신원 무시, 401', await observe(`/api/my/notes?userId=${TEST_UUID}&role=instructor`), refusedJson));
+  rows.push(row(4, '금지', 'GET /api/notes/:id (토큰 없음, 남의 메모)', '401 JSON', await observe(`/api/notes/${TEST_UUID}`), refusedJson));
   rows.push(row(5, '금지', '공개 키로 원본 /rest/v1/notes', '권한 오류, 메모 없음',
     await observe(`${SUPABASE_URL}/rest/v1/notes?select=id&limit=1`, { headers: { apikey: SUPABASE_PUBLISHABLE_KEY, authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}` } }),
     (r) => !(r.status === 200 && Array.isArray(r.json) && r.json.length > 0)));
@@ -190,17 +201,14 @@ async function runOps() {
   rows.push(row(10, '금지', 'POST /api/restore/:id (토큰 없음)', '401 JSON', await observe(`/api/restore/${TEST_UUID}`, { method: 'POST', body: { confirm: true } }), refusedJson));
   rows.push(row(11, '금지', 'PUT /api/notes/:id (서명·승인 없음)', '401 JSON', await observe(`/api/notes/${TEST_UUID}`, { method: 'PUT', headers: { authorization: FAKE_TOKEN }, body: { title: 'x' } }), refusedJson));
 
-  // 판정기·탐지 규칙·정책 사본: 서버가 고정된 가상 입력을 지금 실행한 결과입니다.
-  const checks = await observe('/api/checks');
-  if (checks.ran && checks.status === 200 && Array.isArray(checks.json?.cases)) {
-    for (const item of checks.json.cases) {
-      const actual = item.decision ?? item.action ?? (item.policyRevision != null ? `정책 버전 ${item.policyRevision}` : '-');
-      rows.push({ stage: item.stage, kind: item.kind, request: `가상 입력 ${item.id}`, expected: item.expected,
-        actual: `${actual}${item.reasonCode ? ` (${item.reasonCode})` : ''}`, verdict: item.ready ? 'ok' : 'bad',
-        requestId: checks.requestId, at: checks.at });
-    }
-  } else {
-    rows.push(skipped('6~10', '-', 'GET /api/checks', '규칙 점검 결과', `점검 API를 읽지 못함${checks.ran ? ` (HTTP ${checks.status})` : ''}`));
+  // 판정기·탐지 규칙·정책 사본: 서버가 고정된 가상 입력 하나씩을 지금 실행한 결과입니다.
+  for (const [id, stage, kind, expected] of RULE_CASES) {
+    const r = await observe(`/api/checks?case=${id}`);
+    const j = r.json ?? {};
+    const actual = j.decision ?? j.action ?? (j.policyRevision != null ? `정책 버전 ${j.policyRevision}` : '-');
+    const item = row(stage, kind, `가상 입력 ${id}`, expected, r, (x) => x.status === 200 && x.json?.ready === true);
+    if (r.ran && r.status === 200) item.actual = `${actual}${j.reasonCode ? ` (${j.reasonCode})` : ''}`;
+    rows.push(item);
   }
 
   // 정상 요청: 로그인하고 이 기기가 승인된 경우에만 실제로 보냅니다. 아니면 미실행입니다.
@@ -239,13 +247,25 @@ async function runOps() {
     return tr;
   }));
   const count = (v) => rows.filter((item) => item.verdict === v).length;
-  for (const dd of document.querySelectorAll('#ops-stats dd')) dd.textContent = String(count(dd.dataset.k));
-  const meta = checks.json && !Array.isArray(checks.json) ? checks.json : {};
-  $('ops-meta').textContent = `점검 ${rows.length}건 · 규칙 ${Array.isArray(meta.rules) ? meta.rules.join(', ') : '-'} · 정책 사본 버전 ${meta.policyRevision ?? '-'} · 배포 커밋 ${meta.commit ?? '-'} · 점검 시각 ${new Date().toISOString()}`;
+  $('live-meta').textContent = `이 화면에서 보낸 점검 ${rows.length}건 · 확인함 ${count('ok')} · 뚫림 ${count('bad')} · 미실행 ${count('skip')} · 점검 시각 ${new Date().toISOString()}`;
   $('ops-run').disabled = false;
 }
 
-$('ops-run').addEventListener('click', () => { runOps().catch(() => { $('ops-meta').textContent = '점검 중 오류가 났습니다.'; $('ops-run').disabled = false; }); });
+// 서버 점검 기록: /api/checks가 돌려준 수치를 계산하지 않고 그대로 옮깁니다. 읽지 못하면 비워 둡니다.
+async function loadServerRecord() {
+  const r = await observe('/api/checks');
+  const record = r.ran && r.status === 200 && r.json && !Array.isArray(r.json) ? r.json : null;
+  for (const dd of document.querySelectorAll('#ops-stats dd')) {
+    const value = record?.[dd.dataset.k];
+    dd.textContent = Number.isInteger(value) ? String(value) : '-';
+  }
+  $('ops-meta').textContent = record
+    ? `기록 시각 ${record.checkedAt ?? '-'} · 검사한 커밋 ${record.commit ?? '-'} · 대상 ${record.target ?? '-'} · 정책 사본 버전 ${record.policyRevision ?? '-'}`
+    : '서버 점검 기록을 읽지 못했습니다. 수치를 표시하지 않습니다.';
+}
+
+$('ops-run').addEventListener('click', () => { runOps().catch(() => { $('live-meta').textContent = '점검 중 오류가 났습니다.'; $('ops-run').disabled = false; }); });
+loadServerRecord().catch(() => { $('ops-meta').textContent = '서버 점검 기록을 읽지 못했습니다. 수치를 표시하지 않습니다.'; });
 
 // 설치형 웹앱: 서비스 워커는 오프라인 안내 화면만 저장합니다(메모·API 응답은 저장하지 않음).
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});

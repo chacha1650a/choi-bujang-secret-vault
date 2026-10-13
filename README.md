@@ -2,6 +2,18 @@
 
 이 저장소는 1단계에서 학생 본인이 GitHub 저장소와 Vercel 배포를 만드는 출발점입니다. 포함된 메모 네 건은 가상 자료입니다. 실제 학생 자료, 토큰, 비밀키를 넣지 마세요.
 
+## 무엇을 누가 만들었나
+
+출처를 두 갈래로 나눕니다.
+
+| 출처 | 들어 있는 것 |
+|---|---|
+| 학생이 만든 것 | 판정기(`src/decider.mjs`), 탐지 규칙(`src/detect.mjs`), 접속 앱 화면(`public/`), 자료실 서버 함수(`api/`), 점검 코드(`src/attack-check.mjs`, `src/rule-check.mjs`), 정책 사본 도구(`scripts/policy.mjs`), DB 설정(`supabase/*.sql`) |
+| 제공 엔진 | ALEPH SDP 엔진. 로그인 세션 확인, 기기 등록과 요청 서명 확인, 판정기 호출과 집행, 회수 집행, 감사 기록 보관은 엔진이 맡습니다. 이 저장소에는 엔진 코드가 없습니다. |
+
+- 이 저장소는 방어전 시작 틀(ChoiTimo/aleph-defense-starter)에서 출발했습니다. 시작 틀이 준 로그인 검증 도우미(`src/verify-login.mjs`)와 묶음·연습 스크립트(`scripts/bundle.mjs` 등)는 학생이 만든 것이 아닙니다.
+- 외부 서비스: Supabase(로그인·DB), Vercel(배포·서버 함수). 비밀값(서버 전용 키 등)은 저장소와 안내에 넣지 않고 Vercel 비밀 입력란에만 둡니다.
+
 ## 학생이 하는 일: 세 걸음
 
 1. GitHub 계정을 만듭니다.
@@ -218,21 +230,17 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 
 ## 12단계 기록: 탈환 작전실을 완성합니다
 
-### 무엇을 누가 만들었나
-
-| 출처 | 들어 있는 것 |
-|---|---|
-| 학생이 만든 것(이 저장소) | 판정기 `src/decider.mjs`, 탐지 규칙 `src/detect.mjs`, 자료실 서버 함수 `api/`(메모·공지·복원·기기 승인·점검), 접속 앱 화면 `public/`(manifest·서비스 워커·작전실), 정책 사본 도구 `scripts/policy.mjs`, 자기 점검 `src/attack-check.mjs`·`src/rule-check.mjs`, DB 설정 `supabase/*.sql` |
-| 제공 엔진 | **ALEPH SDP 엔진 사용**. 로그인 세션 확인, 기기 등록·요청 서명(mTLS 릴레이), 판정기 호출과 집행, 회수 집행은 엔진이 맡습니다. 이 저장소에는 엔진 코드가 없습니다. |
-| 외부 서비스 | Supabase(Auth·DB), Vercel(배포·서버 함수) |
+출처(학생이 만든 것과 제공 엔진 ALEPH SDP 엔진)는 이 README 맨 위 「무엇을 누가 만들었나」에 적었습니다.
 
 ### 제작 1: 탈환 작전실 화면
 
 첫 화면 아래 「탈환 작전실」에서 「점검 실행」을 누르면 다음을 한 표로 보여 줍니다. 결과는 응답 상태로만 정하고, 보내지 못한 시험은 「미실행」으로 둡니다. 메모 본문·토큰은 표시하지 않습니다(정상 조회는 건수만).
 - **금지 요청(실제 전송):** `/data.json`, 토큰 없음·엉터리 토큰·쿼리 신원으로 `/api/my/notes`, 공개 키로 원본 `/rest/v1/notes`, `/api/notices`, `POST /api/restore/:id`, 서명·승인 없는 `PUT /api/notes/:id`.
-- **판정기 규칙·탐지 사건·복구 버전:** 서버 `GET /api/checks`가 고정된 가상 입력 11건(6~10단계 정상·금지)을 지금 실행한 결과. 판정(`allow`/`deny`/`step_up`), 탐지(`propose_revocation`/`observe`), 정책 사본 버전.
+- **판정기 규칙·탐지 사건·복구 버전:** 서버 `GET /api/checks?case=…`가 고정된 가상 입력 11건(6~10단계 정상·금지)을 지금 실행한 결과. 판정(`allow`/`deny`/`step_up`), 탐지(`propose_revocation`/`observe`), 정책 사본 버전.
 - **회수 상태·정상 요청:** 로그인했으면 이 기기의 승인 상태(`approved`/`approval_pending`/`device_revoked`)를, 승인된 기기면 내 메모 조회(건수만)를 실제로 보냅니다. 아니면 미실행.
-- 각 줄에 요청 ID(이 화면이 만든 UUID)와 확인 시각이 붙습니다. 화면의 수치는 표의 줄 수를 그대로 센 값입니다.
+- 각 줄에 요청 ID(이 화면이 만든 UUID)와 확인 시각이 붙습니다.
+- **서버 점검 기록(화면 맨 위 수치):** `GET /api/checks`(인자 없음)는 `npm run bundle`과 같은 점검 코드(`src/attack-check.mjs`)를 이 배포에 실제로 보내 센 점검 항목·막은 공격·뚫린 공격·실행하지 않은 점검을 돌려주고(60초 동안 기억), 화면은 이 수치를 계산하지 않고 그대로 옮깁니다. 기록을 읽지 못하면 수치를 비워 둡니다.
+- 첫 제출(cb54f50, 30점)에서 심판 runner가 점검 코드를 격리 환경에서 불러오지 못했고(`runner_import_failed`, JSON·내장 모듈 import 때문), 화면 수치가 서버 기록과 달랐으며(`S12_SCREEN_MISMATCH`), 출처 표가 README 아래쪽에 꾸민 글씨로 있었습니다(`S12_SOURCE_MIXED`). 점검 코드를 import 없는 한 파일로 바꾸고, 모든 점검 요청을 배포 주소 한 곳에만 보내게 하고, 화면 수치를 서버 기록에서 그대로 옮기고, 출처 표를 맨 위로 옮겼습니다.
 
 ### 제작 2: 1~11단계 정상·금지 요청 실측 표 만드는 절차
 

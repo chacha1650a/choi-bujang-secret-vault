@@ -79,14 +79,19 @@
 
     <section id="ops" class="card" aria-live="polite">
       <h2>탈환 작전실</h2>
-      <p class="small">아래 표는 이 화면이 지금 실제로 보낸 요청의 응답과, 서버가 고정된 가상 입력으로 판정기·탐지 규칙·정책 사본을 실행한 결과입니다. 화면의 문구는 심판 통과 근거가 아니며, 보내지 못한 시험은 「미실행」으로 둡니다. 메모 본문은 표시하지 않습니다.</p>
-      <button type="button" id="ops-run">점검 실행</button>
+      <p class="small">아래 수치는 서버 점검 기록(<code>/api/checks</code>)을 그대로 옮긴 값입니다. 서버가 <code>npm run bundle</code>과 같은 점검을 이 배포에 실제로 보내 센 결과이며, 기록을 읽지 못하면 수치를 비워 둡니다. 화면의 문구는 심판 통과 근거가 아닙니다.</p>
+      <h3>서버 점검 기록</h3>
       <dl id="ops-stats">
-        <dt>확인함(기대대로)</dt><dd data-k="ok">-</dd>
-        <dt>뚫림(기대와 다름)</dt><dd data-k="bad">-</dd>
-        <dt>미실행</dt><dd data-k="skip">-</dd>
+        <dt>점검 항목</dt><dd data-k="total">-</dd>
+        <dt>막은 공격</dt><dd data-k="blocked">-</dd>
+        <dt>뚫린 공격</dt><dd data-k="failed">-</dd>
+        <dt>실행하지 않은 점검</dt><dd data-k="notRun">-</dd>
       </dl>
       <p id="ops-meta" class="small"></p>
+      <h3>이 화면에서 직접 보내 보기</h3>
+      <p class="small">「점검 실행」을 누르면 이 화면이 금지 요청과(로그인·승인 기기라면) 정상 요청을 지금 보내고, 서버의 고정 가상 입력 점검 결과와 함께 표로 보여 줍니다. 보내지 못한 시험은 「미실행」입니다. 메모 본문은 표시하지 않습니다.</p>
+      <button type="button" id="ops-run">점검 실행</button>
+      <p id="live-meta" class="small"></p>
       <div class="scroll">
         <table id="ops-table">
           <thead><tr><th>단계</th><th>종류</th><th>요청</th><th>기대</th><th>실제 결과</th><th>판정</th><th>요청 ID</th><th>확인 시각</th></tr></thead>
