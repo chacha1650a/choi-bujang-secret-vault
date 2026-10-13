@@ -1,0 +1,53 @@
+{
+  "schema": "aleph.xdr.patterns.v1",
+  "moduleKey": "brute-force",
+  "mitre": ["T1110"],
+  "patterns": [
+    {
+      "id": "bf-failure-burst",
+      "name": "같은 주소 로그인 실패 연속",
+      "tier": "strong",
+      "condition": "한 출발 주소(또는 계정)의 로그인 실패가 짧은 시간에 10건 이상 쌓임",
+      "evidence": "MITRE ATT&CK T1110.001 Password Guessing: 한 계정에 비밀번호를 연속으로 넣어 맞히는 공격",
+      "when": { "field": "data.count", "gte": 10 }
+    },
+    {
+      "id": "bf-password-spray",
+      "name": "여러 계정에 같은 비밀번호 대입",
+      "tier": "strong",
+      "condition": "한 출발 주소가 계정 5개 이상에 로그인을 넣었거나, 계정을 바꿔 가며 실패를 5건 이상 쌓음",
+      "evidence": "MITRE ATT&CK T1110.003 Password Spraying: 흔한 비밀번호 하나를 여러 계정에 넣어 보는 공격",
+      "when": {
+        "any": [
+          { "field": "data.accounts", "listGte": 5 },
+          { "all": [
+            { "field": "rule.description", "regex": "(여러|서로 다른) 계정|계정 \\d+개|계정 이름을 바꿔" },
+            { "field": "data.count", "gte": 5 }
+          ] }
+        ]
+      }
+    },
+    {
+      "id": "bf-failure-few",
+      "name": "로그인 실패 몇 건 반복",
+      "tier": "medium",
+      "condition": "같은 주소·계정의 로그인 실패가 3~9건(성공으로 끝났거나 간격이 고르지 않음)",
+      "evidence": "MITRE ATT&CK T1110 Brute Force: 반복 실패는 대입 공격의 초기 신호지만 사용자의 입력 실수와 구분이 필요함",
+      "when": { "any": [
+        { "field": "data.count", "gte": 3 },
+        { "field": "data.accounts", "listGte": 2 }
+      ] }
+    },
+    {
+      "id": "bf-wazuh-level",
+      "name": "Wazuh 무차별 대입 경보 등급",
+      "tier": "weak",
+      "condition": "Wazuh 규칙 수준 5 이상이고 rule.mitre 에 T1110 이 붙음",
+      "evidence": "Wazuh 규칙 수준(rule.level)과 MITRE ATT&CK T1110 표시: 경보 원천이 대입 시도로 분류한 사건",
+      "when": { "all": [
+        { "field": "rule.level", "gte": 5 },
+        { "field": "rule.mitre", "includesAny": ["T1110", "T1110.001", "T1110.003", "T1110.004"] }
+      ] }
+    }
+  ]
+}

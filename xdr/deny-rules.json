@@ -1,0 +1,142 @@
+{
+  "schema": "aleph.xdr.deny-rules.v1",
+  "rules": [
+    {
+      "id": "xdr_block.brute-force.203.0.113.10",
+      "moduleKey": "brute-force",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "203.0.113.10",
+      "createdAt": "2026-10-13T07:04:28.964Z",
+      "expiresAt": "2026-10-13T08:04:28.964Z",
+      "evidenceAlertIds": [
+        "bf-01",
+        "bf-02"
+      ],
+      "reasons": [
+        "같은 주소 로그인 실패 연속 · Wazuh 수준 12",
+        "여러 계정에 같은 비밀번호 대입 · Wazuh 수준 12"
+      ]
+    },
+    {
+      "id": "xdr_block.brute-force.198.51.100.20",
+      "moduleKey": "brute-force",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "198.51.100.20",
+      "createdAt": "2026-10-13T07:04:28.964Z",
+      "expiresAt": "2026-10-13T08:04:28.964Z",
+      "evidenceAlertIds": [
+        "bf-03"
+      ],
+      "reasons": [
+        "같은 주소 로그인 실패 연속, 여러 계정에 같은 비밀번호 대입 · Wazuh 수준 10"
+      ]
+    },
+    {
+      "id": "xdr_block.brute-force.192.0.2.30",
+      "moduleKey": "brute-force",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "192.0.2.30",
+      "createdAt": "2026-10-13T07:04:28.964Z",
+      "expiresAt": "2026-10-13T08:04:28.964Z",
+      "evidenceAlertIds": [
+        "bf-04"
+      ],
+      "reasons": [
+        "같은 주소 로그인 실패 연속 · Wazuh 수준 12"
+      ]
+    },
+    {
+      "id": "xdr_block.brute-force.203.0.113.21",
+      "moduleKey": "brute-force",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "203.0.113.21",
+      "createdAt": "2026-10-13T07:04:28.964Z",
+      "expiresAt": "2026-10-13T08:04:28.964Z",
+      "evidenceAlertIds": [
+        "bf-05"
+      ],
+      "reasons": [
+        "같은 주소 로그인 실패 연속, 여러 계정에 같은 비밀번호 대입 · Wazuh 수준 11"
+      ]
+    },
+    {
+      "id": "xdr_block.brute-force.198.51.100.44",
+      "moduleKey": "brute-force",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "198.51.100.44",
+      "createdAt": "2026-10-13T07:04:28.964Z",
+      "expiresAt": "2026-10-13T08:04:28.964Z",
+      "evidenceAlertIds": [
+        "bf-06"
+      ],
+      "reasons": [
+        "같은 주소 로그인 실패 연속 · Wazuh 수준 12"
+      ]
+    },
+    {
+      "id": "xdr_block.brute-force.203.0.113.15",
+      "moduleKey": "brute-force",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "203.0.113.15",
+      "createdAt": "2026-10-13T07:04:28.964Z",
+      "expiresAt": "2026-10-13T08:04:28.964Z",
+      "evidenceAlertIds": [
+        "bf-07"
+      ],
+      "reasons": [
+        "같은 주소 로그인 실패 연속 · Wazuh 수준 10"
+      ]
+    },
+    {
+      "id": "xdr_block.brute-force.192.0.2.18",
+      "moduleKey": "brute-force",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "192.0.2.18",
+      "createdAt": "2026-10-13T07:04:28.964Z",
+      "expiresAt": "2026-10-13T08:04:28.964Z",
+      "evidenceAlertIds": [
+        "bf-08"
+      ],
+      "reasons": [
+        "같은 주소 로그인 실패 연속 · Wazuh 수준 12"
+      ]
+    },
+    {
+      "id": "xdr_block.brute-force.198.51.100.8",
+      "moduleKey": "brute-force",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "198.51.100.8",
+      "createdAt": "2026-10-13T07:04:28.964Z",
+      "expiresAt": "2026-10-13T08:04:28.964Z",
+      "evidenceAlertIds": [
+        "bf-09"
+      ],
+      "reasons": [
+        "같은 주소 로그인 실패 연속, 여러 계정에 같은 비밀번호 대입 · Wazuh 수준 11"
+      ]
+    },
+    {
+      "id": "xdr_block.brute-force.203.0.113.40",
+      "moduleKey": "brute-force",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "203.0.113.40",
+      "createdAt": "2026-10-13T07:04:28.964Z",
+      "expiresAt": "2026-10-13T08:04:28.964Z",
+      "evidenceAlertIds": [
+        "bf-10"
+      ],
+      "reasons": [
+        "같은 주소 로그인 실패 연속 · Wazuh 수준 12"
+      ]
+    }
+  ]
+}
