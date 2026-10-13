@@ -164,13 +164,20 @@ async function observe(path, { method = 'GET', headers = {}, body } = {}) {
 
 const refusedJson = (r) => [401, 403].includes(r.status) && typeof r.json?.error === 'string' && !r.leaked;
 
-function row(stage, kind, request, expected, r, okWhen) {
-  if (!r.ran) return { stage, kind, request, expected, actual: '요청을 보내지 못함', verdict: 'skip', requestId: r.requestId, at: r.at };
+// 출처: 결과 한 줄이 어느 학생 작업에서 나왔는지, 또는 제공 엔진(ALEPH SDP 엔진) 몫인지 적습니다.
+const SRC = {
+  app: '학생 접속 앱(public/)', api: '학생 자료실 API(api/)', db: '학생 DB 권한(supabase/)', device: '학생 기기 승인 명단(api/device)',
+  decider: '학생 판정기(src/decider.mjs)', detect: '학생 탐지 규칙(src/detect.mjs)', policy: '학생 정책 사본(policy/)',
+  engine: '제공 엔진(ALEPH SDP 엔진)',
+};
+
+function row(stage, kind, request, expected, r, okWhen, source = SRC.api) {
+  if (!r.ran) return { stage, kind, request, expected, actual: '요청을 보내지 못함', verdict: 'skip', source, requestId: r.requestId, at: r.at };
   const detail = r.json && typeof r.json === 'object' && !Array.isArray(r.json)
     ? ['error', 'reason', 'approved', 'ready'].filter((k) => k in r.json)
       .map((k) => `${k}=${typeof r.json[k] === 'object' && r.json[k] !== null ? (r.json[k].code ?? 'object') : r.json[k]}`).join(' ') : '';
   return { stage, kind, request, expected, actual: `HTTP ${r.status}${detail ? ` · ${detail}` : ''}`,
-    verdict: okWhen(r) ? 'ok' : 'bad', requestId: r.requestId, at: r.at };
+    verdict: okWhen(r) ? 'ok' : 'bad', source, requestId: r.requestId, at: r.at };
 }
 
 // 서버 점검 API의 고정 가상 입력 사례(src/rule-check.mjs와 같은 목록)입니다.
@@ -183,21 +190,21 @@ const RULE_CASES = [
   ['s10-policy-verified', 10, '정상', '검증한 정책 사본과 지금 정책이 같음'],
 ];
 
-const skipped = (stage, kind, request, expected, why) => ({ stage, kind, request, expected, actual: why, verdict: 'skip', requestId: '-', at: '-' });
+const skipped = (stage, kind, request, expected, why, source = SRC.api) => ({ stage, kind, request, expected, actual: why, verdict: 'skip', source, requestId: '-', at: '-' });
 
 async function runOps() {
   $('ops-run').disabled = true;
   $('live-meta').textContent = '점검 중입니다.';
   const rows = [];
   // 금지 요청: 이 화면에서 실제로 보냅니다.
-  rows.push(row(1, '금지', 'GET /data.json', '메모 없음(404)', await observe('/data.json'), (r) => r.status === 404 && !r.leaked));
+  rows.push(row(1, '금지', 'GET /data.json', '메모 없음(404)', await observe('/data.json'), (r) => r.status === 404 && !r.leaked, SRC.app));
   rows.push(row(3, '금지', 'GET /api/my/notes (토큰 없음)', '401 JSON', await observe('/api/my/notes'), refusedJson));
   rows.push(row(3, '금지', 'GET /api/my/notes (엉터리 토큰)', '401 JSON', await observe('/api/my/notes', { headers: { authorization: FAKE_TOKEN } }), refusedJson));
   rows.push(row(4, '금지', 'GET /api/my/notes?userId=…&role=instructor', '쿼리 신원 무시, 401', await observe(`/api/my/notes?userId=${TEST_UUID}&role=instructor`), refusedJson));
   rows.push(row(4, '금지', 'GET /api/notes/:id (토큰 없음, 남의 메모)', '401 JSON', await observe(`/api/notes/${TEST_UUID}`), refusedJson));
   rows.push(row(5, '금지', '공개 키로 원본 /rest/v1/notes', '권한 오류, 메모 없음',
     await observe(`${SUPABASE_URL}/rest/v1/notes?select=id&limit=1`, { headers: { apikey: SUPABASE_PUBLISHABLE_KEY, authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}` } }),
-    (r) => !(r.status === 200 && Array.isArray(r.json) && r.json.length > 0)));
+    (r) => !(r.status === 200 && Array.isArray(r.json) && r.json.length > 0), SRC.db));
   rows.push(row(8, '금지', 'GET /api/notices (토큰 없음)', '401 JSON', await observe('/api/notices'), refusedJson));
   rows.push(row(10, '금지', 'POST /api/restore/:id (토큰 없음)', '401 JSON', await observe(`/api/restore/${TEST_UUID}`, { method: 'POST', body: { confirm: true } }), refusedJson));
   rows.push(row(11, '금지', 'PUT /api/notes/:id (서명·승인 없음)', '401 JSON', await observe(`/api/notes/${TEST_UUID}`, { method: 'PUT', headers: { authorization: FAKE_TOKEN }, body: { title: 'x' } }), refusedJson));
@@ -207,7 +214,9 @@ async function runOps() {
     const r = await observe(`/api/checks?case=${id}`);
     const j = r.json ?? {};
     const actual = j.decision ?? j.action ?? (j.policyRevision != null ? `정책 버전 ${j.policyRevision}` : '-');
-    const item = row(stage, kind, `가상 입력 ${id}`, expected, r, (x) => x.status === 200 && x.json?.ready === true);
+    const fallback = stage === 9 ? SRC.detect : stage === 10 ? SRC.policy : SRC.decider;
+    const source = typeof j.source === 'string' ? j.source : fallback;
+    const item = row(stage, kind, `가상 입력 ${id}`, expected, r, (x) => x.status === 200 && x.json?.ready === true, source);
     if (r.ran && r.status === 200) item.actual = `${actual}${j.reasonCode ? ` (${j.reasonCode})` : ''}`;
     rows.push(item);
   }
@@ -216,12 +225,12 @@ async function runOps() {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   if (!token) {
-    rows.push(skipped(11, '정상', 'GET /api/device/status (로그인)', 'approved=true', '로그인 후 실행'));
+    rows.push(skipped(11, '정상', 'GET /api/device/status (로그인)', 'approved=true', '로그인 후 실행', SRC.device));
     rows.push(skipped(3, '정상', 'GET /api/my/notes (로그인·승인 기기)', '200, 내 메모만', '로그인·기기 승인 후 실행'));
   } else {
     const auth = { authorization: `Bearer ${token}` };
     const device = await observe('/api/device/status', { headers: auth });
-    rows.push(row(11, '정상', 'GET /api/device/status (로그인)', 'approved=true', device, (r) => r.status === 200 && r.json?.approved === true));
+    rows.push(row(11, '정상', 'GET /api/device/status (로그인)', 'approved=true', device, (r) => r.status === 200 && r.json?.approved === true, SRC.device));
     if (device.json?.approved === true) {
       const mine = await observe('/api/my/notes', { headers: auth });
       const count = Array.isArray(mine.json) ? mine.json.length : null;
@@ -234,12 +243,15 @@ async function runOps() {
     }
   }
 
+  // 제공 엔진의 집행(판정 집행·회수 집행·요청 서명 확인)은 이 화면이 받지 않으므로 미실행으로 둡니다.
+  rows.push(skipped('6~11', '엔진', 'ALEPH SDP 엔진의 판정 집행·회수 집행·요청 서명 확인', '엔진이 집행', '이 화면은 엔진 집행 결과를 받지 않음', SRC.engine));
+
   rows.sort((a, b) => Number(String(a.stage).split('~')[0]) - Number(String(b.stage).split('~')[0]));
   const labels = { ok: '확인함', bad: '뚫림', skip: '미실행' };
   $('ops-table').tBodies[0].replaceChildren(...rows.map((item) => {
     const tr = document.createElement('tr');
     for (const [key, value] of [['stage', item.stage], ['kind', item.kind], ['request', item.request], ['expected', item.expected],
-      ['actual', item.actual], ['verdict', labels[item.verdict]], ['requestId', item.requestId], ['at', item.at]]) {
+      ['actual', item.actual], ['verdict', labels[item.verdict]], ['source', item.source], ['requestId', item.requestId], ['at', item.at]]) {
       const td = document.createElement('td');
       td.textContent = String(value);
       if (key === 'verdict') td.className = item.verdict;
@@ -262,6 +274,7 @@ async function loadServerRecord() {
   }
   $('ops-meta').textContent = record
     ? `기록 시각 ${record.checkedAt ?? '-'} · 검사한 커밋 ${record.commit ?? '-'} · 대상 ${record.target ?? '-'} · 정책 사본 버전 ${record.policyRevision ?? '-'}`
+      + ` · 기록 출처 ${record.recordSource ?? '-'} · 제공 엔진 ${record.sources?.engine?.name ?? '-'}(집행 결과 없음)`
     : '서버 점검 기록을 읽지 못했습니다. 수치를 표시하지 않습니다.';
 }
 

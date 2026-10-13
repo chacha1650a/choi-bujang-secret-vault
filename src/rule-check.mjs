@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { RULE_IDS, decide } from './decider.mjs';
 import { detect } from './detect.mjs';
 import { currentPolicy, diffPolicy, verifySnapshot } from './policy-snapshot.mjs';
+import { ENGINE, SOURCE_OF } from './sources.mjs';
 
 // 12단계: 고정된 가상 입력으로 학생 판정기·탐지 규칙·정책 사본을 실제로 실행합니다.
 // 사용자 입력을 코드로 실행하지 않고, 실제 세션·메모·기기 상태는 읽거나 바꾸지 않습니다.
@@ -51,20 +52,22 @@ export async function runRuleCheck(caseId, { policy } = {}) {
   const decideCase = DECIDE_CASES.find(([id]) => id === caseId);
   if (decideCase) {
     const result = await decide(decideCase[4]());
-    return { caseId, ready: result.decision === decideCase[5], decision: result.decision, reasonCode: result.reasonCode };
+    return { caseId, ready: result.decision === decideCase[5], decision: result.decision, reasonCode: result.reasonCode,
+      source: SOURCE_OF.decider, engine: ENGINE, engineEnforced: 'not_run' };
   }
   const detectCase = DETECT_CASES.find(([id]) => id === caseId);
   if (detectCase) {
     const result = detect(detectCase[4]());
-    return { caseId, ready: result.action === detectCase[5], action: result.action };
+    return { caseId, ready: result.action === detectCase[5], action: result.action,
+      source: SOURCE_OF.detect, engine: ENGINE, engineEnforced: 'not_run' };
   }
   if (caseId === 's10-policy-verified') {
     try {
       const snapshot = verifySnapshot(policy?.snapshot);
       const diff = diffPolicy(snapshot, currentPolicy(policy.config, RULE_IDS, snapshot.policyRevision));
-      return { caseId, ready: diff.clean, policyRevision: snapshot.policyRevision };
+      return { caseId, ready: diff.clean, policyRevision: snapshot.policyRevision, source: SOURCE_OF.policy };
     } catch {
-      return { caseId, ready: false, policyRevision: null };
+      return { caseId, ready: false, policyRevision: null, source: SOURCE_OF.policy };
     }
   }
   return null;

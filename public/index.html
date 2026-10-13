@@ -33,6 +33,8 @@
     td.ok { color: #8ad8df; } td.bad { color: #ffb3c0; } td.skip { color: #ffd28a; }
     #ops-stats { display: grid; grid-template-columns: max-content auto; gap: 4px 12px; margin: 12px 0; }
     #ops-stats dd { margin: 0; font-weight: 700; }
+    #ops-sources { display: grid; grid-template-columns: max-content auto; gap: 4px 12px; margin: 12px 0; font-size: 14px; }
+    #ops-sources dt { font-weight: 700; } #ops-sources dd { margin: 0; }
   </style>
 </head>
 <body>
@@ -80,6 +82,11 @@
     <section id="ops" class="card" aria-live="polite">
       <h2>탈환 작전실</h2>
       <p class="small">아래 수치는 서버 점검 기록(<code>/api/checks</code>)을 그대로 옮긴 값입니다. 서버가 <code>npm run bundle</code>과 같은 점검을 이 배포에 실제로 보내 센 결과이며, 기록을 읽지 못하면 수치를 비워 둡니다. 화면의 문구는 심판 통과 근거가 아닙니다.</p>
+      <h3>출처</h3>
+      <dl id="ops-sources">
+        <dt>학생이 만든 것</dt><dd>판정기(src/decider.mjs), 탐지 규칙(src/detect.mjs), 접속 앱(이 화면, public/), 자료실(api/, supabase/), 점검 코드(src/attack-check.mjs, src/rule-check.mjs)</dd>
+        <dt>제공 엔진</dt><dd>ALEPH SDP 엔진. 요청마다 학생 판정기를 불러 결과를 집행하고, 학생 탐지 규칙의 회수 제안을 집행하며, 요청 서명을 확인합니다. 이 화면은 엔진의 집행 결과를 받지 않으므로 엔진 집행은 미실행으로 둡니다.</dd>
+      </dl>
       <h3>서버 점검 기록</h3>
       <dl id="ops-stats">
         <dt>점검 항목</dt><dd data-k="total">-</dd>
@@ -94,7 +101,7 @@
       <p id="live-meta" class="small"></p>
       <div class="scroll">
         <table id="ops-table">
-          <thead><tr><th>단계</th><th>종류</th><th>요청</th><th>기대</th><th>실제 결과</th><th>판정</th><th>요청 ID</th><th>확인 시각</th></tr></thead>
+          <thead><tr><th>단계</th><th>종류</th><th>요청</th><th>기대</th><th>실제 결과</th><th>판정</th><th>출처</th><th>요청 ID</th><th>확인 시각</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>

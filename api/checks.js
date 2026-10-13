@@ -3,6 +3,7 @@ import verifiedPolicy from '../policy/verified-policy.json' with { type: 'json' 
 import { runAttackChecks } from '../src/attack-check.mjs';
 import { RULE_IDS } from '../src/decider.mjs';
 import { CHECK_CASES, runRuleCheck } from '../src/rule-check.mjs';
+import { SOURCE_OF, SOURCES } from '../src/sources.mjs';
 
 // 12단계 탈환 작전실의 서버 점검 기록입니다.
 // - ?case=<고정 ID>: 고정된 가상 입력 하나로 판정기·탐지 규칙·정책 사본을 지금 실행한 결과.
@@ -21,6 +22,7 @@ async function serverRecord() {
     checkedAt: new Date().toISOString(), commit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ?? null,
     target: config.publicAppUrl, rules: [...RULE_IDS], policyRevision: verifiedPolicy.policyRevision,
     total: attempts.length, blocked: count('blocked'), failed: count('breached'), notRun: count('not_run'),
+    recordSource: SOURCE_OF.attackCheck, sources: SOURCES,
     attempts,
   };
   cached = { at: Date.now(), record };

@@ -210,7 +210,7 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 
 ## 12단계 기록: 탈환 작전실을 완성합니다
 
-출처(학생이 만든 것과 제공 엔진 ALEPH SDP 엔진)는 이 README 맨 위 「무엇을 누가 만들었나」에 적었습니다.
+출처(학생이 만든 것과 제공 엔진 ALEPH SDP 엔진)는 이 README 맨 위 「무엇을 누가 만들었나」에 적었고, 탈환 작전실 화면과 서버 점검 기록에도 같은 구분을 붙였습니다.
 
 ### 제작 1: 탈환 작전실 화면
 
@@ -218,7 +218,8 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 - 금지 요청(실제 전송): `/data.json`, 토큰 없음·엉터리 토큰·쿼리 신원으로 `/api/my/notes`, 공개 키로 원본 `/rest/v1/notes`, `/api/notices`, `POST /api/restore/:id`, 서명·승인 없는 `PUT /api/notes/:id`.
 - 판정기 규칙·탐지 사건·복구 버전: 서버 `GET /api/checks?case=…`가 고정된 가상 입력 11건(6~10단계 정상·금지)을 지금 실행한 결과. 판정(`allow`/`deny`/`step_up`), 탐지(`propose_revocation`/`observe`), 정책 사본 버전.
 - 회수 상태·정상 요청: 로그인했으면 이 기기의 승인 상태(`approved`/`approval_pending`/`device_revoked`)를, 승인된 기기면 내 메모 조회(건수만)를 실제로 보냅니다. 아니면 미실행.
-- 각 줄에 요청 ID(이 화면이 만든 UUID)와 확인 시각이 붙습니다.
+- 각 줄에 출처, 요청 ID(이 화면이 만든 UUID), 확인 시각이 붙습니다. 출처는 학생 작업(접속 앱, 자료실 API, DB 권한, 기기 승인 명단, 판정기, 탐지 규칙, 정책 사본) 또는 제공 엔진(ALEPH SDP 엔진)입니다. 엔진의 판정 집행·회수 집행·요청 서명 확인은 이 화면이 받지 않으므로 미실행으로 둡니다.
+- 출처 칸: 작전실 맨 위 「출처」에 학생이 만든 것과 제공 엔진(ALEPH SDP 엔진)을 나눠 적었습니다. 서버 점검 기록(`GET /api/checks`)에도 `sources`(학생이 만든 것 / ALEPH SDP 엔진)와 `recordSource`(학생 점검 코드)가 붙고, 가상 입력 점검(`?case=`) 결과에는 `source`(학생 판정기·탐지 규칙·정책 사본)와 `engine`이 붙습니다.
 - 서버 점검 기록(화면 맨 위 수치): `GET /api/checks`(인자 없음)는 `npm run bundle`과 같은 점검 코드(`src/attack-check.mjs`)를 이 배포에 실제로 보내 센 점검 항목·막은 공격·뚫린 공격·실행하지 않은 점검을 돌려주고(60초 동안 기억), 화면은 이 수치를 계산하지 않고 그대로 옮깁니다. 기록을 읽지 못하면 수치를 비워 둡니다.
 - 점검 코드는 심판 격리 환경에서 그대로 불러올 수 있게 import 없는 한 파일이고, 모든 점검 요청을 배포 주소 한 곳에만 보냅니다.
 - 제출 묶음은 공개 HTTPS 주소로 GET·HEAD 요청만 보냅니다. 쓰기 요청이 필요한 점검 2건(복원 `POST`, 수정 `PUT`)은 보내지 않고 `observed`와 `result`를 `not_run`으로 남기며, 서명·승인 없는 요청 거부는 읽기 요청(`GET /api/notes/:id` + 엉터리 토큰)으로 확인합니다. 쓰기 요청 거부는 로컬 시험(`test:restore`·`test:device`)과 작전실 「점검 실행」(브라우저에서 실제 전송)으로 확인합니다.

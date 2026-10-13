@@ -59,3 +59,29 @@ test('12단계: 서버 점검 기록의 수치는 bundle과 같은 점검을 실
     globalThis.fetch = originalFetch;
   }
 });
+
+test('12단계: 작전실 화면과 서버 점검 기록은 학생 작업과 제공 엔진(ALEPH SDP 엔진)을 나눠 적는다', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const html = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
+  const ops = html.slice(html.indexOf('<section id="ops"'), html.indexOf('</section>', html.indexOf('<section id="ops"')));
+  assert.match(ops, /<dt>학생이 만든 것<\/dt><dd>판정기\(src\/decider\.mjs\), 탐지 규칙\(src\/detect\.mjs\), 접속 앱[^<]*자료실/u);
+  assert.match(ops, /<dt>제공 엔진<\/dt><dd>ALEPH SDP 엔진\./u);
+  assert.match(ops, /<th>출처<\/th>/u);
+
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = fakeDeployment;
+    const record = (await call({})).body;
+    assert.equal(record.sources.engine.name, 'ALEPH SDP 엔진');
+    assert.equal(record.sources.student.label, '학생이 만든 것');
+    assert.equal(record.recordSource, '학생 점검 코드(src/attack-check.mjs)');
+    // 점검 항목 자체는 runner 규칙대로 다섯 값만 갖는다(출처는 기록 위쪽에만 붙인다).
+    assert.ok(record.attempts.every((a) => Object.keys(a).sort().join(',') === 'attackId,expected,observed,result,stage'));
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  const decided = (await call({ case: 's06-unregistered' })).body;
+  assert.equal(decided.source, '학생 판정기(src/decider.mjs)');
+  assert.equal(decided.engine, 'ALEPH SDP 엔진');
+  assert.equal((await call({ case: 's09-burst-read' })).body.source, '학생 탐지 규칙(src/detect.mjs)');
+});
