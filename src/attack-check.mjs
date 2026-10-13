@@ -20,7 +20,7 @@ const refused =(result) => [401, 403].includes(result.status)
   && typeof result.body?.error === 'string' && !Array.isArray(result.body);
 
 export async function runAttackChecks(config) {
-  if (![4, 5, 6, 7, 8, 9, 10].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
+  if (![4, 5, 6, 7, 8, 9, 10, 11].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
   let app;
   try {
     app = new URL(config.publicAppUrl);
@@ -55,6 +55,19 @@ export async function runAttackChecks(config) {
       observed: original.leaked ? '공개 키로 원본 API에서 메모가 보임'
         : `공개 키로 원본 API를 불러도 메모가 보이지 않음 (HTTP ${original.status})`,
     });
+  }
+  if (config.step >= 10) {
+    const restore = await probe(app, '/api/restore/00000000-0000-4000-8000-000000000001');
+    attempts.push({ attackId: 'no_token_restore', expected: '로그인 없는 복원 요청은 401·403과 JSON 오류',
+      observed: `토큰 없는 복원 요청 ${refused(restore) ? '거부됨' : '거부되지 않음'} (HTTP ${restore.status})` });
+  }
+  if (config.step >= 11) {
+    // 11단계: 기기 승인 상태는 로그인 없이 물어도 승인 전으로 답하고, 자료를 넣지 않아야 합니다.
+    const device = await probe(app, '/api/device/status');
+    const safe = device.status === 200 && device.body?.approved === false
+      && !Array.isArray(device.body) && !('body' in (device.body ?? {}));
+    attempts.push({ attackId: 'no_token_device_status', expected: '로그인 없는 기기 상태 요청은 승인 전으로 답하고 자료 없음',
+      observed: `기기 상태 ${safe ? '승인 전·자료 없음' : '확인 필요'} (HTTP ${device.status})` });
   }
   return attempts;
 }

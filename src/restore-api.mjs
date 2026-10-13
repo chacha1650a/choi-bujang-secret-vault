@@ -8,8 +8,8 @@ import { currentPolicy, diffPolicy, verifySnapshot } from './policy-snapshot.mjs
 export const contentHash = (title, body) => createHash('sha256').update(`${title}\u001f${body}`, 'utf8').digest('hex');
 
 // policy: { snapshot, config, ruleIds } — 검증한 안전 정책 사본과 지금 시험 정책. 요청마다 다시 검증합니다.
-export function createRestoreApi({ verifyLogin, supabase, policy }) {
-  const guarded = createGuard(verifyLogin);
+export function createRestoreApi({ verifyLogin, supabase, policy, deviceCheck }) {
+  const guarded = createGuard(verifyLogin, deviceCheck);
 
   async function audit(who, action, id, detail) {
     // 감사 기록은 덧붙이기만 합니다. 토큰·본문은 넣지 않고 가명 사용자 ID와 해시만 남깁니다.

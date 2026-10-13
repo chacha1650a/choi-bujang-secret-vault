@@ -4,6 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>BYTE BACK | 로그인한 자료실</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#101a28">
   <style>
     :root { color-scheme: dark; font-family: system-ui, sans-serif; }
     body { margin: 0; min-height: 100vh; background: #101a28; color: #ecf4ff; }
@@ -27,10 +30,10 @@
 </head>
 <body>
   <main>
-    <div class="eyebrow">BYTE BACK · 3단계 로그인</div>
+    <div class="eyebrow">BYTE BACK · 나만의 접속 앱</div>
     <h1>로그인한 자료실</h1>
-    <p>자료는 서버에 있고, 서버가 로그인 토큰을 직접 확인해야 보입니다. 아래 기록은 모두 실습을 위해 만든 가상 자료입니다.</p>
-    <div class="card notice">로그인은 신원 확인일 뿐입니다. 아직 남의 메모를 막는 장치는 없습니다. 다음 단계에서 막습니다.</div>
+    <p>자료는 서버에 있고, 서버가 로그인과 이 기기의 승인을 직접 확인해야 보입니다. 아래 기록은 모두 실습을 위해 만든 가상 자료입니다.</p>
+    <div class="card notice">앱을 설치했다는 표시만으로는 기기 확인이 끝나지 않습니다. 기기 승인은 서버의 명단으로만 정해집니다. 로그인 정보는 이 창의 메모리에만 두므로 새로고침하면 다시 로그인합니다.</div>
     <div id="message" role="status" aria-live="polite"></div>
 
     <form id="login" class="card">
@@ -47,6 +50,15 @@
         <span id="who"></span>
         <button type="button" id="logout">로그아웃</button>
       </div>
+      <div id="device" class="card" aria-live="polite">
+        <strong>이 기기의 상태</strong>
+        <p id="device-state">서버에 이 기기의 승인 여부를 묻는 중입니다.</p>
+        <button type="button" id="device-request" hidden>이 기기 승인 요청</button>
+        <button type="button" id="device-refresh" hidden>승인 상태 다시 확인</button>
+      </div>
+    </section>
+
+    <section id="vault" hidden>
       <form id="editor" class="card">
         <label for="title">제목</label>
         <input id="title" maxlength="200" required>
@@ -65,7 +77,10 @@
     const SUPABASE_URL = 'https://qnhghbipylyhzoyhkkgl.supabase.co';
     const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0ob3zQmenT9MOOcxmrpaHw_ri91--ge';
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    // 11단계: 로그인 토큰을 브라우저 저장소(localStorage 등)에 넣지 않고 이 창의 메모리에만 둡니다.
+    const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: false },
+    });
     const $ = (id) => document.getElementById(id);
     let editingId = null;
 
@@ -130,14 +145,42 @@
       $('notes').replaceChildren(...items);
     }
 
+    // 11단계: 서버가 이 기기를 승인된 기기로 확인한 뒤에만 자료실(메모)을 엽니다.
+    // 승인 여부는 서버 응답으로만 판단하고, 기기 ID는 자바스크립트가 읽을 수 없는 쿠키로만 서버와 주고받습니다.
+    async function checkDevice() {
+      $('vault').hidden = true;
+      $('notes').replaceChildren();
+      const status = await api('/api/device/status');
+      const messages = {
+        device_approved: '서버가 이 기기를 승인했습니다. 자료실을 엽니다.',
+        approval_pending: '승인 요청을 보냈습니다. 강사가 서버에서 승인하기 전에는 자료가 열리지 않습니다.',
+        device_revoked: '이 기기의 승인이 회수됐습니다. 자료를 열 수 없습니다.',
+        device_not_registered: '이 기기는 아직 승인되지 않았습니다. 승인 전에는 메모를 보여 주지 않습니다.',
+      };
+      $('device-state').textContent = messages[status.reason] ?? '이 기기의 승인 여부를 확인하지 못했습니다.';
+      $('device-request').hidden = status.approved || status.reason !== 'device_not_registered';
+      $('device-refresh').hidden = status.approved;
+      if (!status.approved) return;
+      $('vault').hidden = false;
+      await loadNotes();
+    }
+
     async function render(session) {
       const loggedIn = Boolean(session);
       $('login').hidden = loggedIn;
       $('session').hidden = !loggedIn;
-      if (!loggedIn) { $('notes').replaceChildren(); resetEditor(); return; }
+      if (!loggedIn) { $('vault').hidden = true; $('notes').replaceChildren(); resetEditor(); return; }
       $('who').textContent = `${session.user.email} 로 로그인했습니다.`;
-      try { await loadNotes(); } catch (error) { say(error.message); }
+      try { await checkDevice(); } catch (error) { say(error.message); }
     }
+
+    $('device-request').addEventListener('click', async () => {
+      try { await api('/api/device/request', { method: 'POST' }); await checkDevice(); }
+      catch (error) { say(error.message); }
+    });
+    $('device-refresh').addEventListener('click', async () => {
+      try { await checkDevice(); } catch (error) { say(error.message); }
+    });
 
     $('login').addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -167,6 +210,9 @@
         say('저장했습니다.');
       } catch (error) { say(error.message); }
     });
+
+    // 설치형 웹앱: 서비스 워커는 오프라인 안내 화면만 저장합니다(메모·API 응답은 저장하지 않음).
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 
     supabase.auth.onAuthStateChange((_event, session) => { render(session); });
     render((await supabase.auth.getSession()).data.session);

@@ -17,6 +17,9 @@ const ZONES = Object.freeze({
   'DELETE /notes/:id': { zone: 'my-notes', path: new RegExp(`^/notes/${SEGMENT}$`, 'u') },
   // 10단계: 내 메모 한 건 복원. 소유자와 사본 해시는 자료 API가 다시 확인합니다.
   'POST /restore/:noteId': { zone: 'my-notes', path: new RegExp(`^/restore/${SEGMENT}$`, 'u') },
+  // 11단계: 이 기기의 승인 상태 확인과 승인 요청. 승인 자체는 서버 명단으로만 정해집니다.
+  'GET /device/status': { zone: 'device', path: /^\/device\/status$/u },
+  'POST /device/request': { zone: 'device', path: /^\/device\/request$/u },
 });
 const stripApi = (value) => value.replace(/^\/api(?=\/)/u, '');
 // :id 자리에 오면 안 되는 기능 이름입니다. 자료 ID가 아니라 다른 구역·여러 사람 자료를 고르는 경로로 봅니다.

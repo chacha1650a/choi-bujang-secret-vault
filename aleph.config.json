@@ -1,5 +1,5 @@
 {
-  "step": 10,
+  "step": 11,
   "repoUrl": "https://github.com/chacha1650a/choi-bujang-secret-vault",
   "publicAppUrl": "https://choi-bujang-secret-vault-delta.vercel.app",
   "sampleMarker": "SAMPLE_NOTE_1",
@@ -63,6 +63,18 @@
       "method": "PUT",
       "pathPattern": "/api/notices/:id",
       "zone": "instructor-notices"
+    },
+    {
+      "service": "notes",
+      "method": "GET",
+      "pathPattern": "/api/device/status",
+      "zone": "device"
+    },
+    {
+      "service": "notes",
+      "method": "POST",
+      "pathPattern": "/api/device/request",
+      "zone": "device"
     }
   ],
   "originalApiUrl": "https://qnhghbipylyhzoyhkkgl.supabase.co/rest/v1/notes",

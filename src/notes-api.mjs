@@ -37,7 +37,8 @@ export const forbid = (response, reason, message) => {
 };
 
 // 서버가 확인한 로그인 정보(verifyLogin)만 믿습니다. 브라우저가 보낸 userId·role은 읽지 않습니다.
-export function createGuard(verifyLogin) {
+// 11단계: deviceCheck가 있으면 서버가 이 기기를 승인된 기기로 확인한 뒤에만 보호 자료를 다룹니다.
+export function createGuard(verifyLogin, deviceCheck) {
   async function authenticate(request, response) {
     response.setHeader('Cache-Control', 'no-store');
     const who = await verifyLogin(request.headers?.authorization);
@@ -58,6 +59,11 @@ export function createGuard(verifyLogin) {
       }
       const who = await authenticate(request, response);
       if (!who) return;
+      if (deviceCheck && !(await deviceCheck(request, who))) {
+        send(response, 403, { error: 'DEVICE_NOT_APPROVED', reason: 'device_not_registered',
+          message: '승인된 기기에서만 자료를 열 수 있습니다.' });
+        return;
+      }
       await run(who);
     } catch {
       // 오류 내용에 주소·키가 섞일 수 있어서 응답과 로그에 자세히 남기지 않습니다.
@@ -70,8 +76,8 @@ export function createGuard(verifyLogin) {
 
 // 4단계: 모든 읽기·추가·수정·삭제는 서버가 검증한 사용자 ID와 DB의 owner_id가 같을 때만 허용합니다.
 // 요청 주소·본문의 userId·owner_id는 믿지 않습니다.
-export function createNotesApi({ verifyLogin, supabase }) {
-  const guarded = createGuard(verifyLogin);
+export function createNotesApi({ verifyLogin, supabase, deviceCheck }) {
+  const guarded = createGuard(verifyLogin, deviceCheck);
 
   async function listMine(who, response) {
     response.setHeader('X-Resource-Id', resourceId('notes', 'mine'));
@@ -179,8 +185,8 @@ export function createNotesApi({ verifyLogin, supabase }) {
 
 // 8단계: 강사 공지 구역. 읽기와 수정 모두 DB의 강사 명단에 있는 학생 계정만 합니다. 일반 학생에게는 다른 구역입니다.
 // 화면 메뉴·요청 본문·토큰의 role은 믿지 않습니다. 심판 시험 신원은 강사 명단에 없으므로 접근할 수 없습니다.
-export function createNoticesApi({ verifyLogin, supabase }) {
-  const guarded = createGuard(verifyLogin);
+export function createNoticesApi({ verifyLogin, supabase, deviceCheck }) {
+  const guarded = createGuard(verifyLogin, deviceCheck);
 
   async function isInstructor(who) {
     if (who.kind !== 'student') return false;

@@ -186,3 +186,18 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 
 - 첫 제출 판정(28be121, 48점, `S10_BACKUP_UNVERIFIED`): 메모 복원 경로가 실행 전에 버전과 바뀔 항목을 보여 주지 않고 바로 덮어썼고, 복원 전에 안전 정책 사본을 다시 검증하지 않았습니다. 미리 보기 → 확인(`confirm`) 두 단계로 바꾸고 요청마다 정책 사본을 다시 검증하게 했습니다.
 - 남은 약점: 사본은 메모가 처음 만들어질 때 한 번만 남기므로, 정상적으로 고친 내용도 복원하면 처음 내용으로 돌아갑니다. 사본 테이블 자체의 백업과 정기 복원 시험은 아직 없습니다.
+
+## 11단계 기록: 나만의 접속 앱을 완성합니다
+
+- 제작 1(설치형 웹앱): `public/manifest.json`(앱 이름 「최부장의 비밀창고 자료실」, standalone, 아이콘 `public/icon.svg`)과 오프라인 안내(`public/offline.html`, 서비스 워커 `public/sw.js`)를 붙였습니다. 서비스 워커는 화면 이동이 네트워크에서 실패할 때 오프라인 안내만 보여 주고, 메모·API 응답·토큰은 저장하지 않습니다. 화면에 「앱 설치 표시만으로는 기기 확인이 끝나지 않는다」고 적었습니다. 따로 설치하는 접속 프로그램은 없습니다.
+- 제작 2(기기 승인 흐름):
+  - `POST /api/device/request`(로그인한 학생): 서버가 무작위 기기 ID(16자리 16진수, 개인키 아님)를 만들어 **HttpOnly·Secure·SameSite=Strict 쿠키**(`Path=/api`)로만 주고, DB(`device_registrations`, `supabase/step11-devices.sql`)에는 그 해시와 `pending` 상태만 남깁니다. 요청만으로는 승인되지 않습니다.
+  - 승인·회수는 서버 코드가 아니라 강사가 SQL Editor에서 상태를 `approved`/`revoked`로 바꿀 때만 됩니다(서버 전용 키에는 읽기·넣기 권한만 있음).
+  - `GET /api/device/status`: 서버가 확인한 승인 여부만 돌려줍니다. 로그인 없이도 200 `{ approved: false }`이고 자료는 넣지 않습니다.
+  - 보호 자료 API(`/api/my/notes`, `/api/notes`, `/api/notes/:id`, `/api/notices*`, `/api/restore/:noteId`)는 로그인한 학생 계정과 이 기기가 **서버 명단에서 승인된 짝**일 때만 처리하고, 아니면 403 `DEVICE_NOT_APPROVED`입니다. 그래서 기기 쿠키가 없는 직접 요청(서명·승인 없이 보내는 보호 요청)에는 자료가 나가지 않습니다.
+  - 화면은 로그인 뒤 서버에 승인 여부를 묻고, 승인된 경우에만 자료실(메모 목록·편집)을 엽니다. 승인 전에는 메모를 요청하지도 보여 주지도 않습니다.
+  - 로그인 토큰은 브라우저 저장소에 넣지 않고 창의 메모리에만 둡니다(`persistSession: false`). 새로고침하면 다시 로그인합니다. 기기 ID 쿠키는 자바스크립트가 읽을 수 없습니다.
+- 요청 서명: 설치형 앱의 요청 서명(경로·본문 변경 탐지)은 반 엔진의 mTLS 릴레이가 검증합니다. 이 저장소에는 엔진의 서명·기기 승인 계약이 없어서(`docs/DECIDER_REQUEST.md`) 서명을 직접 검증하지 않고, 승인되지 않은 기기의 요청에는 자료를 주지 않는 것으로 막습니다. 판정기에는 `GET /api/device/status`, `POST /api/device/request` 두 경로만 `device` 구역으로 더했습니다.
+- 정책 사본: 경로 표가 바뀌어 `npm run policy:diff`가 차이 두 줄을 보였고, 검토 후 `npm run policy:snapshot -- 2`로 버전 2 사본을 새로 남겼습니다(같거나 낮은 버전으로는 덮어쓰지 않음, `policy/audit.jsonl`에 기록).
+- 확인 순서: `npm run test:device`(상태 응답, 승인 요청·쿠키, 승인 전 자료 없음, 승인 후 정상, manifest·저장소 미사용), 기존 `test:notes`·`test:restore`·`test:decider`. 배포 후: 로그인 없이 `GET /api/device/status` → 200 `approved: false`, A로 로그인 → 승인 요청 → (SQL로 승인) → 「승인 상태 다시 확인」 → 자료실 열림.
+- 남은 약점: 기기 ID는 쿠키라서 같은 브라우저 프로필을 복사하면 따라갈 수 있습니다. 요청 서명은 엔진에 맡겼고, 승인은 SQL로만 합니다.

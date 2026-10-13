@@ -1,5 +1,5 @@
 {
-  "policyRevision": 1,
+  "policyRevision": 2,
   "rules": [
     "device_registered",
     "resource_zone",
@@ -15,6 +15,12 @@
     {
       "service": "notes",
       "method": "GET",
+      "pathPattern": "/api/device/status",
+      "zone": "device"
+    },
+    {
+      "service": "notes",
+      "method": "GET",
       "pathPattern": "/api/my/notes",
       "zone": "my-notes"
     },
@@ -23,6 +29,12 @@
       "method": "GET",
       "pathPattern": "/api/notes/:id",
       "zone": "my-notes"
+    },
+    {
+      "service": "notes",
+      "method": "POST",
+      "pathPattern": "/api/device/request",
+      "zone": "device"
     },
     {
       "service": "notes",
@@ -61,5 +73,5 @@
       "zone": "instructor-notices"
     }
   ],
-  "sha256": "6eb56c9ec47fb757cbe350a4f5d03d18c5d387e70f939ff47d19952a6447bbff"
+  "sha256": "eb2bd4a2bc980611a710290ece9fe4130a432230b580bb676403af2efb91db9c"
 }

@@ -17,7 +17,8 @@
     "policy:snapshot": "node scripts/policy.mjs snapshot",
     "policy:diff": "node scripts/policy.mjs diff",
     "policy:restore": "node scripts/policy.mjs restore",
-    "test:restore": "node --test test/restore-api.test.mjs test/policy.test.mjs"
+    "test:restore": "node --test test/restore-api.test.mjs test/policy.test.mjs",
+    "test:device": "node --test test/device-api.test.mjs"
   },
   "engines": {
     "node": ">=22"

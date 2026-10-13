@@ -4,6 +4,7 @@ import verifiedPolicy from '../policy/verified-policy.json' with { type: 'json' 
 import { RULE_IDS } from './decider.mjs';
 import { createNoticesApi, createNotesApi } from './notes-api.mjs';
 import { createRestoreApi } from './restore-api.mjs';
+import { createDeviceApi, createDeviceCheck } from './device-api.mjs';
 import { createLoginVerifier } from './verify-login.mjs';
 
 let cached;
@@ -18,11 +19,14 @@ function getApis(env) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const verifyLogin = createLoginVerifier({ config, supabaseSecretKey: key });
+  // 11단계: 보호 자료 API는 서버가 승인된 기기로 확인한 요청만 처리합니다.
+  const deviceCheck = createDeviceCheck(supabase);
   cached = {
-    notes: createNotesApi({ verifyLogin, supabase }),
-    notices: createNoticesApi({ verifyLogin, supabase }),
-    restore: createRestoreApi({ verifyLogin, supabase,
+    notes: createNotesApi({ verifyLogin, supabase, deviceCheck }),
+    notices: createNoticesApi({ verifyLogin, supabase, deviceCheck }),
+    restore: createRestoreApi({ verifyLogin, supabase, deviceCheck,
       policy: { snapshot: verifiedPolicy, config, ruleIds: RULE_IDS } }),
+    device: createDeviceApi({ verifyLogin, supabase }),
   };
   return cached;
 }
@@ -37,6 +41,10 @@ export function getNoticesApi(env = process.env) {
 
 export function getRestoreApi(env = process.env) {
   return getApis(env)?.restore ?? null;
+}
+
+export function getDeviceApi(env = process.env) {
+  return getApis(env)?.device ?? null;
 }
 
 export function notFoundConfig(response) {

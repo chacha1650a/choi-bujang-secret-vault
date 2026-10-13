@@ -34,8 +34,18 @@ function printDiff(diff) {
 async function main(command, args) {
   const { config, ruleIds } = await loadCurrent();
   if (command === 'snapshot') {
-    if (existsSync(SNAPSHOT)) throw new Error('검증한 정책 사본이 이미 있습니다. 덮어쓰지 않습니다.');
-    const policy = currentPolicy(config, ruleIds, Number(args[0] ?? 1));
+    const revision = Number(args[0] ?? 1);
+    // 검토를 마친 정책 변경만 새 버전으로 남깁니다. 같거나 낮은 버전으로는 덮어쓰지 않습니다.
+    if (existsSync(SNAPSHOT)) {
+      const old = verifySnapshot(JSON.parse(readFileSync(SNAPSHOT, 'utf8')));
+      if (!Number.isInteger(revision) || revision <= old.policyRevision) {
+        throw new Error(`검증한 정책 사본(버전 ${old.policyRevision})이 이미 있습니다. 더 높은 버전으로만 새로 남깁니다.`);
+      }
+      appendFileSync(AUDIT, `${JSON.stringify({ at: new Date().toISOString(), action: 'policy_snapshot',
+        from: old.policyRevision, to: revision })}
+`);
+    }
+    const policy = currentPolicy(config, ruleIds, revision);
     writeFileSync(SNAPSHOT, `${JSON.stringify({ ...policy, sha256: policyHash(policy) }, null, 2)}\n`);
     process.stdout.write(`정책 사본을 만들었습니다: 버전 ${policy.policyRevision}\n`);
     return;
