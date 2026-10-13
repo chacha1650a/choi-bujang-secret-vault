@@ -1,0 +1,70 @@
+{
+  "schema": "aleph.xdr.patterns.v1",
+  "moduleKey": "exfiltration",
+  "mitre": ["T1041", "T1048"],
+  "patterns": [
+    {
+      "id": "ex-large-transfer",
+      "name": "처음 보는 목적지로 대용량 전송",
+      "tier": "strong",
+      "condition": "한 번에 50MB 이상이 바깥 목적지로 나감",
+      "evidence": "MITRE ATT&CK T1048 Exfiltration Over Alternative Protocol: 평소 쓰지 않는 통로로 큰 자료를 한꺼번에 빼내는 공격",
+      "when": { "field": "data.bytes", "gte": 50000000 }
+    },
+    {
+      "id": "ex-bulk-files",
+      "name": "자료 묶음 대량 반출",
+      "tier": "strong",
+      "condition": "한 번에 파일 100개 이상이 바깥 목적지로 나감",
+      "evidence": "MITRE ATT&CK T1048 Exfiltration Over Alternative Protocol·T1041 Exfiltration Over C2 Channel: 자료실 전체를 묶어 내보내는 반출",
+      "when": { "field": "data.files", "gte": 100 }
+    },
+    {
+      "id": "ex-repeat-transfer",
+      "name": "같은 목적지로 큰 전송 반복",
+      "tier": "strong",
+      "condition": "20MB 이상 전송이 같은 목적지로 5번 이상 반복됨",
+      "evidence": "MITRE ATT&CK T1041 Exfiltration Over C2 Channel: 명령 통로로 큰 파일을 나눠 반복 전송하는 반출",
+      "when": { "all": [
+        { "field": "data.count", "gte": 5 },
+        { "field": "data.bytes", "gte": 20000000 }
+      ] }
+    },
+    {
+      "id": "ex-offhours-archive",
+      "name": "업무 시간 밖 압축 파일 반출",
+      "tier": "strong",
+      "condition": "수업·업무 시간 밖에 10MB 이상 압축 파일이 바깥으로 나감",
+      "evidence": "MITRE ATT&CK T1048 Exfiltration Over Alternative Protocol·T1560 Archive Collected Data: 모은 자료를 압축해 한가한 시간에 내보내는 반출",
+      "when": { "all": [
+        { "field": "rule.description", "regex": "(수업|업무) 시간 밖" },
+        { "field": "rule.description", "regex": "압축|전송" },
+        { "field": "data.bytes", "gte": 10000000 }
+      ] }
+    },
+    {
+      "id": "ex-unusual-transfer",
+      "name": "평소보다 큰 전송·처음 보는 목적지",
+      "tier": "medium",
+      "condition": "1MB 이상, 파일 10개 이상, 반복 3번 이상이거나 처음 보는 목적지·압축 파일 전송이 한 번 있음",
+      "evidence": "MITRE ATT&CK T1041·T1048: 반출의 초기 신호지만 수업 자료 백업·동기화와 구분이 필요함",
+      "when": { "any": [
+        { "field": "data.bytes", "gte": 1000000 },
+        { "field": "data.files", "gte": 10 },
+        { "field": "data.count", "gte": 3 },
+        { "field": "rule.description", "regex": "처음 (보|봅|본)|압축 파일|평소와 다른|평소보다" }
+      ] }
+    },
+    {
+      "id": "ex-wazuh-level",
+      "name": "Wazuh 자료 반출 경보 등급",
+      "tier": "weak",
+      "condition": "Wazuh 규칙 수준 5 이상이고 rule.mitre 에 T1041 또는 T1048 이 붙음",
+      "evidence": "Wazuh 규칙 수준(rule.level)과 MITRE ATT&CK T1041·T1048 표시: 경보 원천이 자료 반출 시도로 분류한 사건",
+      "when": { "all": [
+        { "field": "rule.level", "gte": 5 },
+        { "field": "rule.mitre", "includesAny": ["T1041", "T1048"] }
+      ] }
+    }
+  ]
+}

@@ -579,6 +579,143 @@
       "reasons": [
         "관리자 그룹 추가 · Wazuh 수준 10"
       ]
+    },
+    {
+      "id": "xdr_block.exfiltration.192.0.2.20",
+      "moduleKey": "exfiltration",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "192.0.2.20",
+      "createdAt": "2026-10-13T07:04:33.442Z",
+      "expiresAt": "2026-10-13T08:04:33.442Z",
+      "evidenceAlertIds": [
+        "ex-01",
+        "ex-02"
+      ],
+      "reasons": [
+        "처음 보는 목적지로 대용량 전송, 자료 묶음 대량 반출 · Wazuh 수준 12",
+        "처음 보는 목적지로 대용량 전송, 업무 시간 밖 압축 파일 반출 · Wazuh 수준 12"
+      ]
+    },
+    {
+      "id": "xdr_block.exfiltration.198.51.100.20",
+      "moduleKey": "exfiltration",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "198.51.100.20",
+      "createdAt": "2026-10-13T07:04:33.442Z",
+      "expiresAt": "2026-10-13T08:04:33.442Z",
+      "evidenceAlertIds": [
+        "ex-03"
+      ],
+      "reasons": [
+        "처음 보는 목적지로 대용량 전송, 같은 목적지로 큰 전송 반복 · Wazuh 수준 11"
+      ]
+    },
+    {
+      "id": "xdr_block.exfiltration.203.0.113.20",
+      "moduleKey": "exfiltration",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "203.0.113.20",
+      "createdAt": "2026-10-13T07:04:33.442Z",
+      "expiresAt": "2026-10-13T08:04:33.442Z",
+      "evidenceAlertIds": [
+        "ex-04"
+      ],
+      "reasons": [
+        "처음 보는 목적지로 대용량 전송 · Wazuh 수준 12"
+      ]
+    },
+    {
+      "id": "xdr_block.exfiltration.192.0.2.25",
+      "moduleKey": "exfiltration",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "192.0.2.25",
+      "createdAt": "2026-10-13T07:04:33.442Z",
+      "expiresAt": "2026-10-13T08:04:33.442Z",
+      "evidenceAlertIds": [
+        "ex-05"
+      ],
+      "reasons": [
+        "처음 보는 목적지로 대용량 전송, 자료 묶음 대량 반출 · Wazuh 수준 10"
+      ]
+    },
+    {
+      "id": "xdr_block.exfiltration.198.51.100.25",
+      "moduleKey": "exfiltration",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "198.51.100.25",
+      "createdAt": "2026-10-13T07:04:33.442Z",
+      "expiresAt": "2026-10-13T08:04:33.442Z",
+      "evidenceAlertIds": [
+        "ex-06"
+      ],
+      "reasons": [
+        "처음 보는 목적지로 대용량 전송, 같은 목적지로 큰 전송 반복, 업무 시간 밖 압축 파일 반출 · Wazuh 수준 12"
+      ]
+    },
+    {
+      "id": "xdr_block.exfiltration.203.0.113.25",
+      "moduleKey": "exfiltration",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "203.0.113.25",
+      "createdAt": "2026-10-13T07:04:33.442Z",
+      "expiresAt": "2026-10-13T08:04:33.442Z",
+      "evidenceAlertIds": [
+        "ex-07"
+      ],
+      "reasons": [
+        "처음 보는 목적지로 대용량 전송 · Wazuh 수준 11"
+      ]
+    },
+    {
+      "id": "xdr_block.exfiltration.192.0.2.26",
+      "moduleKey": "exfiltration",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "192.0.2.26",
+      "createdAt": "2026-10-13T07:04:33.442Z",
+      "expiresAt": "2026-10-13T08:04:33.442Z",
+      "evidenceAlertIds": [
+        "ex-08"
+      ],
+      "reasons": [
+        "처음 보는 목적지로 대용량 전송, 자료 묶음 대량 반출 · Wazuh 수준 12"
+      ]
+    },
+    {
+      "id": "xdr_block.exfiltration.198.51.100.26",
+      "moduleKey": "exfiltration",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "198.51.100.26",
+      "createdAt": "2026-10-13T07:04:33.442Z",
+      "expiresAt": "2026-10-13T08:04:33.442Z",
+      "evidenceAlertIds": [
+        "ex-09"
+      ],
+      "reasons": [
+        "처음 보는 목적지로 대용량 전송, 같은 목적지로 큰 전송 반복 · Wazuh 수준 10"
+      ]
+    },
+    {
+      "id": "xdr_block.exfiltration.203.0.113.26",
+      "moduleKey": "exfiltration",
+      "action": "deny",
+      "ruleId": "xdr_block",
+      "sourceIp": "203.0.113.26",
+      "createdAt": "2026-10-13T07:04:33.442Z",
+      "expiresAt": "2026-10-13T08:04:33.442Z",
+      "evidenceAlertIds": [
+        "ex-10"
+      ],
+      "reasons": [
+        "처음 보는 목적지로 대용량 전송 · Wazuh 수준 12"
+      ]
     }
   ]
 }

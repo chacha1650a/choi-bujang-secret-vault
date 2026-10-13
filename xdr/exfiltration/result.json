@@ -1,0 +1,191 @@
+{
+  "schema": "aleph.xdr.result.v1",
+  "moduleKey": "exfiltration",
+  "decisions": [
+    {
+      "alertId": "ex-01",
+      "action": "block",
+      "confidence": 0.92,
+      "reason": "처음 보는 목적지로 대용량 전송, 자료 묶음 대량 반출 · Wazuh 수준 12"
+    },
+    {
+      "alertId": "ex-02",
+      "action": "block",
+      "confidence": 0.92,
+      "reason": "처음 보는 목적지로 대용량 전송, 업무 시간 밖 압축 파일 반출 · Wazuh 수준 12"
+    },
+    {
+      "alertId": "ex-03",
+      "action": "block",
+      "confidence": 0.9,
+      "reason": "처음 보는 목적지로 대용량 전송, 같은 목적지로 큰 전송 반복 · Wazuh 수준 11"
+    },
+    {
+      "alertId": "ex-04",
+      "action": "block",
+      "confidence": 0.92,
+      "reason": "처음 보는 목적지로 대용량 전송 · Wazuh 수준 12"
+    },
+    {
+      "alertId": "ex-05",
+      "action": "block",
+      "confidence": 0.88,
+      "reason": "처음 보는 목적지로 대용량 전송, 자료 묶음 대량 반출 · Wazuh 수준 10"
+    },
+    {
+      "alertId": "ex-06",
+      "action": "block",
+      "confidence": 0.92,
+      "reason": "처음 보는 목적지로 대용량 전송, 같은 목적지로 큰 전송 반복, 업무 시간 밖 압축 파일 반출 · Wazuh 수준 12"
+    },
+    {
+      "alertId": "ex-07",
+      "action": "block",
+      "confidence": 0.9,
+      "reason": "처음 보는 목적지로 대용량 전송 · Wazuh 수준 11"
+    },
+    {
+      "alertId": "ex-08",
+      "action": "block",
+      "confidence": 0.92,
+      "reason": "처음 보는 목적지로 대용량 전송, 자료 묶음 대량 반출 · Wazuh 수준 12"
+    },
+    {
+      "alertId": "ex-09",
+      "action": "block",
+      "confidence": 0.88,
+      "reason": "처음 보는 목적지로 대용량 전송, 같은 목적지로 큰 전송 반복 · Wazuh 수준 10"
+    },
+    {
+      "alertId": "ex-10",
+      "action": "block",
+      "confidence": 0.92,
+      "reason": "처음 보는 목적지로 대용량 전송 · Wazuh 수준 12"
+    },
+    {
+      "alertId": "ex-11",
+      "action": "alert",
+      "confidence": 0.64,
+      "reason": "평소보다 큰 전송·처음 보는 목적지 · Wazuh 수준 6"
+    },
+    {
+      "alertId": "ex-12",
+      "action": "alert",
+      "confidence": 0.68,
+      "reason": "평소보다 큰 전송·처음 보는 목적지 · Wazuh 수준 7"
+    },
+    {
+      "alertId": "ex-13",
+      "action": "alert",
+      "confidence": 0.6,
+      "reason": "평소보다 큰 전송·처음 보는 목적지 · Wazuh 수준 5"
+    },
+    {
+      "alertId": "ex-14",
+      "action": "alert",
+      "confidence": 0.64,
+      "reason": "평소보다 큰 전송·처음 보는 목적지 · Wazuh 수준 6"
+    },
+    {
+      "alertId": "ex-15",
+      "action": "alert",
+      "confidence": 0.72,
+      "reason": "평소보다 큰 전송·처음 보는 목적지 · Wazuh 수준 8"
+    },
+    {
+      "alertId": "ex-16",
+      "action": "alert",
+      "confidence": 0.64,
+      "reason": "평소보다 큰 전송·처음 보는 목적지 · Wazuh 수준 6"
+    },
+    {
+      "alertId": "ex-17",
+      "action": "alert",
+      "confidence": 0.68,
+      "reason": "평소보다 큰 전송·처음 보는 목적지 · Wazuh 수준 7"
+    },
+    {
+      "alertId": "ex-18",
+      "action": "alert",
+      "confidence": 0.6,
+      "reason": "평소보다 큰 전송·처음 보는 목적지 · Wazuh 수준 5"
+    },
+    {
+      "alertId": "ex-19",
+      "action": "alert",
+      "confidence": 0.64,
+      "reason": "평소보다 큰 전송·처음 보는 목적지 · Wazuh 수준 6"
+    },
+    {
+      "alertId": "ex-20",
+      "action": "alert",
+      "confidence": 0.68,
+      "reason": "평소보다 큰 전송·처음 보는 목적지 · Wazuh 수준 7"
+    },
+    {
+      "alertId": "ex-21",
+      "action": "record",
+      "confidence": 0.11,
+      "reason": "맞는 공격 패턴 없음 · Wazuh 수준 3"
+    },
+    {
+      "alertId": "ex-22",
+      "action": "record",
+      "confidence": 0.08,
+      "reason": "맞는 공격 패턴 없음 · Wazuh 수준 2"
+    },
+    {
+      "alertId": "ex-23",
+      "action": "record",
+      "confidence": 0.11,
+      "reason": "맞는 공격 패턴 없음 · Wazuh 수준 3"
+    },
+    {
+      "alertId": "ex-24",
+      "action": "record",
+      "confidence": 0.11,
+      "reason": "맞는 공격 패턴 없음 · Wazuh 수준 3"
+    },
+    {
+      "alertId": "ex-25",
+      "action": "record",
+      "confidence": 0.08,
+      "reason": "맞는 공격 패턴 없음 · Wazuh 수준 2"
+    },
+    {
+      "alertId": "ex-26",
+      "action": "record",
+      "confidence": 0.11,
+      "reason": "맞는 공격 패턴 없음 · Wazuh 수준 3"
+    },
+    {
+      "alertId": "ex-27",
+      "action": "record",
+      "confidence": 0.11,
+      "reason": "맞는 공격 패턴 없음 · Wazuh 수준 3"
+    },
+    {
+      "alertId": "ex-28",
+      "action": "record",
+      "confidence": 0.08,
+      "reason": "맞는 공격 패턴 없음 · Wazuh 수준 2"
+    },
+    {
+      "alertId": "ex-29",
+      "action": "record",
+      "confidence": 0.11,
+      "reason": "맞는 공격 패턴 없음 · Wazuh 수준 3"
+    },
+    {
+      "alertId": "ex-30",
+      "action": "record",
+      "confidence": 0.11,
+      "reason": "맞는 공격 패턴 없음 · Wazuh 수준 3"
+    }
+  ],
+  "counts": {
+    "block": 10,
+    "alert": 10,
+    "record": 10
+  }
+}
