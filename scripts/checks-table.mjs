@@ -11,7 +11,7 @@ const cell = (value) => String(value).replaceAll('|', '\\|');
 const lines = [
   `점검 시각 ${bundle.checkedAt ?? '-'} · 커밋 ${String(bundle.commit).slice(0, 12)} · 단계 ${bundle.step}`,
   '',
-  '| 단계 | 점검 | 기대 | 실제 응답 · 요청 ID | 결과 |',
+  '| 단계 | 점검 | 기대 | 실제 응답(observed) | 결과 |',
   '|---|---|---|---|---|',
   ...bundle.attackAttempts.map((a) => `| ${a.stage} | ${cell(a.attackId)} | ${cell(a.expected)} | ${cell(a.observed)} | ${label[a.result] ?? a.result} |`),
   '',

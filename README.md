@@ -244,9 +244,38 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<내 배포 주소>/data.json
 6. **중지:** Vercel 프로젝트에서 배포를 내리거나(Instant Rollback·일시 중지), 기기 승인을 `revoked`로 바꿉니다. 엔진 쪽 경로 허용을 끄는 일은 엔진 몫입니다.
 7. **복구:** 검사한 커밋으로 되돌려 다시 배포합니다(`git checkout <검사한 커밋>` 뒤 재배포). 정책은 `npm run policy:diff` → `npm run policy:restore -- --apply`, 메모 한 건은 `POST /api/restore/:noteId`(미리 보기 → `{ "confirm": true }`). 복구 뒤에는 위 「제작 2」 절차로 다시 실측합니다.
 
-### 실측 결과
+### 실측 결과 (`npm run bundle` → `npm run checks:table`, 실제 배포에 보낸 요청)
 
-(배포 후 다시 측정해 채웁니다)
+점검 시각 2026-10-13T06:02:24.907Z · 커밋 05eb350fa2e1 · 단계 12
+
+| 단계 | 점검 | 기대 | 실제 응답(observed) | 결과 |
+|---|---|---|---|---|
+| 1 | s01-static-notes | /data.json에 메모가 없음 | HTTP 404 | 막음(기대대로) |
+| 2 | s02-static-copy | 다른 정적 사본(/notes.json)에 메모가 없음 | HTTP 404 | 막음(기대대로) |
+| 3 | s03-unauth-list | 로그인 없는 내 메모 목록은 401·403과 JSON 오류 | HTTP 401 | 막음(기대대로) |
+| 3 | s03-fake-token | 엉터리 토큰은 401·403과 JSON 오류 | HTTP 401 | 막음(기대대로) |
+| 4 | s04-query-identity | 쿼리로 넣은 신원·역할은 무시 | HTTP 401 | 막음(기대대로) |
+| 4 | s04-header-identity | 헤더로 넣은 신원·역할은 무시 | HTTP 401 | 막음(기대대로) |
+| 4 | s04-other-note | 로그인 없이 남의 메모 한 건 조회 거부 | HTTP 401 | 막음(기대대로) |
+| 5 | s05-direct-table | 배포 주소로 원본 표(/rest/v1/notes)를 직접 읽을 수 없음 | HTTP 404 | 막음(기대대로) |
+| 6 | s06-unregistered | 미등록 기기 거부 | HTTP 200; jsonReady=true | 막음(기대대로) |
+| 7 | s07-compound | 복합 이상 접속은 추가 확인 | HTTP 200; jsonReady=true | 막음(기대대로) |
+| 8 | s08-other-zone | 로그인 없는 강사 공지 조회 거부 | HTTP 401 | 막음(기대대로) |
+| 8 | s08-unknown-route | 모르는 경로 거부 | HTTP 200; jsonReady=true | 막음(기대대로) |
+| 8 | s08-all-notes | 전체 메모 목록 거부 | HTTP 200; jsonReady=true | 막음(기대대로) |
+| 8 | s08-write-notice | 반 공지 쓰기 거부 | HTTP 200; jsonReady=true | 막음(기대대로) |
+| 9 | s09-burst-read | 조회 폭주는 회수 제안 | HTTP 200; jsonReady=true | 막음(기대대로) |
+| 10 | s10-restore-unauth | 로그인 없는 복원 요청 거부 | not_run | 미실행 |
+| 10 | s10-policy-verified | 검증한 정책 사본과 지금 정책이 같음 | HTTP 200; jsonReady=true | 막음(기대대로) |
+| 11 | s11-device | 로그인 없는 기기 상태는 승인 전·자료 없음 | HTTP 200 | 막음(기대대로) |
+| 11 | s11-unsigned-write | 서명·승인 없는 수정 요청 거부 | not_run | 미실행 |
+| 11 | s11-unsigned-read | 서명·승인 없는 읽기 요청 거부 | HTTP 401 | 막음(기대대로) |
+
+막음 18 · 뚫림 0 · 미실행 2
+
+- 미실행 2건은 쓰기 요청(복원 POST, 수정 PUT)이라 제출 묶음 규칙(GET·HEAD만)에 따라 보내지 않은 것입니다. 같은 커밋의 서버 점검 기록(`GET /api/checks`, 작전실 화면 맨 위 수치)도 점검 항목 20 · 막은 공격 18 · 뚫린 공격 0 · 실행하지 않은 점검 2입니다.
+- 작전실 「점검 실행」은 브라우저에서 쓰기 요청까지 실제로 보냅니다(8cc37d4 배포에서 22건: 확인함 20 · 뚫림 0 · 미실행 2, 미실행은 로그인·승인 기기가 필요한 정상 요청). 정상 요청은 2026-10-13에 학생이 로그인·기기 승인 후 앱 화면에서 메모 추가·수정·삭제가 정상인 것을 직접 확인했습니다.
+- 41종 공격 전체는 심판이 보내며 이 저장소에서는 실행하지 않았습니다.
 
 ## 참고: 출발점과 사용한 외부 서비스
 
