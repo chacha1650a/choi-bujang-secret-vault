@@ -20,7 +20,9 @@
     "test:restore": "node --test test/restore-api.test.mjs test/policy.test.mjs",
     "test:device": "node --test test/device-api.test.mjs",
     "test:checks": "node --test test/checks.test.mjs",
-    "checks:table": "node scripts/checks-table.mjs"
+    "checks:table": "node scripts/checks-table.mjs",
+    "xdr:sync": "node scripts/xdr-sync.mjs",
+    "test:xdr": "node --test test/xdr-run.test.mjs test/xdr-modules.test.mjs"
   },
   "engines": {
     "node": ">=22"

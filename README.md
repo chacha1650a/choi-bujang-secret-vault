@@ -13,7 +13,7 @@ BYTE BACK 방어전 1~12단계에서 학생이 만든 가상 자료실입니다.
 
 | 출처 | 들어 있는 것 |
 |---|---|
-| 학생이 만든 것 | 판정기(`src/decider.mjs`), 탐지 규칙(`src/detect.mjs`), 접속 앱 화면(`public/`), 자료실 서버 함수(`api/`), 점검 코드(`src/attack-check.mjs`, `src/rule-check.mjs`), 정책 사본 도구(`scripts/policy.mjs`), DB 설정(`supabase/*.sql`) |
+| 학생이 만든 것 | 판정기(`src/decider.mjs`), 탐지 규칙(`src/detect.mjs`), 접속 앱 화면(`public/`), 자료실 서버 함수(`api/`), 점검 코드(`src/attack-check.mjs`, `src/rule-check.mjs`), 정책 사본 도구(`scripts/policy.mjs`), DB 설정(`supabase/*.sql`), XDR 판정(`xdr/*/decide.mjs`) |
 | 제공 엔진 | ALEPH SDP 엔진. 요청마다 신원·기기 등록·재로그인을 확인한 뒤 학생 판정기를 부르고 결과를 집행합니다. 학생 탐지 규칙의 회수 제안 집행, 요청 서명 확인, 엔진 감사 기록 보관도 엔진이 맡습니다. 이 저장소에는 엔진 코드가 없습니다. |
 
 제공 엔진: ALEPH SDP 엔진 사용(이 저장소에 없음). 비밀값(서버 전용 키 등)은 저장소와 이 안내에 넣지 않고 Vercel 비밀 입력란에만 둡니다.
@@ -74,4 +74,8 @@ BYTE BACK 방어전 1~12단계에서 학생이 만든 가상 자료실입니다.
 
 막음 18 · 뚫림 0 · 미실행 2
 
-미실행 2건은 쓰기 요청이라 제출 묶음 규칙(GET·HEAD만)에 따라 보내지 않은 것입니다. 같은 배포의 서버 점검 기록도 점검 항목 20 · 막은 공격 18 · 뚫린 공격 0 · 실행하지 않은 점검 2입니다. 측정한 커밋 이후로는 문서만 바꿨습니다.
+미실행 2건은 쓰기 요청이라 제출 묶음 규칙(GET·HEAD만)에 따라 보내지 않은 것입니다. 같은 배포의 서버 점검 기록도 점검 항목 20 · 막은 공격 18 · 뚫린 공격 0 · 실행하지 않은 점검 2입니다. 측정한 커밋 이후로는 문서와 XDR 모듈만 바꿨습니다.
+
+## XDR 보너스 (xdr-01~06)
+
+`xdr/<모듈>/decide.mjs`는 `patterns.json`(MITRE ATT&CK 근거가 붙은 패턴)을 맨 위 상수로 옮겨 적고, 경보가 패턴과 맞는 정도와 Wazuh 수준으로 확신도를 매겨 block(0.85 이상)·alert(0.5 이상)·record를 돌려줍니다. import는 없습니다. `respond.mjs`는 block만 출발 주소 거부 규칙(만료 시각·근거 경보 번호)으로 넣고 알림을 `xdr/alerts.log`에 쌓습니다. 판정기의 기존 규칙은 고치지 않습니다. 실행: `npm run xdr:run -- <모듈>`, 시험: `npm run test:xdr`. 자세한 설명은 [xdr/README.md](xdr/README.md)에 있습니다.
