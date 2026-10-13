@@ -167,7 +167,8 @@ const refusedJson = (r) => [401, 403].includes(r.status) && typeof r.json?.error
 function row(stage, kind, request, expected, r, okWhen) {
   if (!r.ran) return { stage, kind, request, expected, actual: '요청을 보내지 못함', verdict: 'skip', requestId: r.requestId, at: r.at };
   const detail = r.json && typeof r.json === 'object' && !Array.isArray(r.json)
-    ? ['error', 'reason', 'approved', 'ready'].filter((k) => k in r.json).map((k) => `${k}=${r.json[k]}`).join(' ') : '';
+    ? ['error', 'reason', 'approved', 'ready'].filter((k) => k in r.json)
+      .map((k) => `${k}=${typeof r.json[k] === 'object' && r.json[k] !== null ? (r.json[k].code ?? 'object') : r.json[k]}`).join(' ') : '';
   return { stage, kind, request, expected, actual: `HTTP ${r.status}${detail ? ` · ${detail}` : ''}`,
     verdict: okWhen(r) ? 'ok' : 'bad', requestId: r.requestId, at: r.at };
 }
