@@ -5,7 +5,7 @@ BYTE BACK 방어전 1~12단계에서 학생이 만든 가상 자료실입니다.
 - 배포 주소: https://choi-bujang-secret-vault-delta.vercel.app
 - 저장소: https://github.com/chacha1650a/choi-bujang-secret-vault
 
-이 저장소는 교육용 실습 결과물입니다. 상용 제품이 아니고, 운영 방어가 끝났다는 뜻도 아닙니다. 단계별 작업 기록은 [records/STAGES.md](records/STAGES.md)에 있습니다.
+이 저장소는 교육용 실습 결과물입니다. 상용 제품이 아니고, 운영 방어가 끝났다는 뜻도 아닙니다. 단계별 작업 기록은 [records/STAGES.md](records/STAGES.md), 1~12단계와 XDR 풀이 과정은 [records/PORTFOLIO.md](records/PORTFOLIO.md)에 있습니다.
 
 ## 무엇을 누가 만들었나
 
