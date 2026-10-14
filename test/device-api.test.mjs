@@ -124,7 +124,7 @@ test('11단계: 보안 헤더는 인라인 스크립트와 다른 사이트의 �
   const vercel = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8'));
   const headers = Object.fromEntries(vercel.headers[0].headers.map((h) => [h.key, h.value]));
   assert.equal(headers['X-Content-Type-Options'], 'nosniff');
-  assert.match(headers['Content-Security-Policy'], /script-src 'self' https:\/\/cdn\.jsdelivr\.net;/u);
+  assert.match(headers['Content-Security-Policy'], /script-src 'self'; connect-src 'self';/u);
   assert.doesNotMatch(headers['Content-Security-Policy'], /script-src[^;]*unsafe-inline/u);
   assert.match(headers['Content-Security-Policy'], /frame-ancestors 'none'/u);
 });
@@ -162,7 +162,8 @@ test('11단계: 설치형 웹앱 설정과 화면은 토큰·기기 키를 브�
   assert.match(html, /rel="manifest"/u);
   // 인라인 스크립트가 없어야 CSP(script-src 'self')로 막을 수 있다.
   assert.doesNotMatch(html, /<script(?![^>]*\bsrc=)[^>]*>/u);
-  assert.match(app, /persistSession: false/u);
+  // 5단계 가점 이후: 로그인 세션은 화면 코드 안의 변수(창 메모리)에만 있다.
+  assert.match(app, /let session = null;/u);
   assert.doesNotMatch(app.replace(/\/\/.*$/gmu, ''), /localStorage|sessionStorage|indexedDB|innerHTML/u);
   const sw = await readFile(new URL('../public/sw.js', import.meta.url), 'utf8');
   assert.doesNotMatch(sw.replace(/\/\/.*$/gmu, ''), /\/api/u);

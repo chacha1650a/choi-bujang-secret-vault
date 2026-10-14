@@ -1,22 +1,38 @@
 // 자료실 화면 코드입니다. 콘텐츠 보안 정책(CSP)으로 인라인 스크립트를 막기 위해 별도 파일로 둡니다.
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/+esm';
-
-// 이 두 값은 브라우저에 넣어도 되는 공개용입니다. 서버 전용 키는 이 파일에 없습니다.
-const SUPABASE_URL = 'https://qnhghbipylyhzoyhkkgl.supabase.co';
-const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0ob3zQmenT9MOOcxmrpaHw_ri91--ge';
-
-// 11단계: 로그인 토큰을 브라우저 저장소(localStorage 등)에 넣지 않고 이 창의 메모리에만 둡니다.
-const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: false },
-});
+// 5단계 가점: 이 화면 코드에는 Supabase 주소도 공개 키도 없습니다. 로그인·가입·갱신은 서버 함수(/api/auth/*)가 대신 보냅니다.
+// 11단계: 로그인 토큰은 브라우저 저장소(localStorage 등)에 넣지 않고 이 창의 메모리에만 둡니다.
+let session = null; // { accessToken, refreshToken, expiresAt, email }
+let refreshing = null;
 const $ = (id) => document.getElementById(id);
 let editingId = null;
 
 const say = (text) => { $('message').textContent = text; };
 
+async function authCall(name, body, token) {
+  const response = await fetch('/api/auth/' + name, {
+    method: 'POST', cache: 'no-store',
+    headers: { 'content-type': 'application/json', ...(token ? { authorization: 'Bearer ' + token } : {}) },
+    body: JSON.stringify(body ?? {}),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.message || '요청을 처리하지 못했습니다.');
+  return result;
+}
+
+// 만료 1분 전이면 서버를 통해 갱신합니다. 갱신하지 못하면 로그아웃 상태로 돌아갑니다.
+async function currentToken() {
+  if (!session) return null;
+  if (session.expiresAt - 60 > Date.now() / 1000) return session.accessToken;
+  refreshing ??= authCall('refresh', { refreshToken: session.refreshToken })
+    .then((next) => { session = { ...next, email: next.email ?? session?.email }; })
+    .catch(() => { session = null; render(null); })
+    .finally(() => { refreshing = null; });
+  await refreshing;
+  return session?.accessToken ?? null;
+}
+
 async function api(path, options = {}) {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
+  const token = await currentToken();
   const response = await fetch(path, {
     ...options,
     cache: 'no-store',
@@ -93,12 +109,12 @@ async function checkDevice() {
   await loadNotes();
 }
 
-async function render(session) {
-  const loggedIn = Boolean(session);
+async function render(current) {
+  const loggedIn = Boolean(current);
   $('login').hidden = loggedIn;
   $('session').hidden = !loggedIn;
   if (!loggedIn) { $('vault').hidden = true; $('notes').replaceChildren(); resetEditor(); return; }
-  $('who').textContent = `${session.user.email} 로 로그인했습니다.`;
+  $('who').textContent = `${current.email ?? '내 계정'} 로 로그인했습니다.`;
   try { await checkDevice(); } catch (error) { say(error.message); }
 }
 
@@ -113,19 +129,29 @@ $('device-refresh').addEventListener('click', async () => {
 $('login').addEventListener('submit', async (event) => {
   event.preventDefault();
   say('');
-  const { error } = await supabase.auth.signInWithPassword({ email: $('email').value, password: $('password').value });
-  if (error) say(`로그인하지 못했습니다: ${error.message}`);
+  try {
+    session = await authCall('login', { email: $('email').value, password: $('password').value });
+    await render(session);
+  } catch (error) { say('로그인하지 못했습니다: ' + error.message); }
   $('password').value = '';
 });
 $('signup').addEventListener('click', async () => {
   say('');
   if (!$('login').reportValidity()) return;
-  const { data, error } = await supabase.auth.signUp({ email: $('email').value, password: $('password').value });
+  try {
+    const result = await authCall('signup', { email: $('email').value, password: $('password').value });
+    if (result.accessToken) { session = result; await render(session); }
+    else say('가입했습니다. 확인 메일의 링크를 누른 뒤 로그인해 주세요.');
+  } catch (error) { say('가입하지 못했습니다: ' + error.message); }
   $('password').value = '';
-  if (error) say(`가입하지 못했습니다: ${error.message}`);
-  else if (!data.session) say('가입했습니다. 확인 메일의 링크를 누른 뒤 로그인해 주세요.');
 });
-$('logout').addEventListener('click', async () => { await supabase.auth.signOut(); say('로그아웃했습니다.'); });
+$('logout').addEventListener('click', async () => {
+  const token = session?.accessToken;
+  session = null;
+  await render(null);
+  if (token) authCall('logout', {}, token).catch(() => {});
+  say('로그아웃했습니다.');
+});
 $('cancel').addEventListener('click', resetEditor);
 $('editor').addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -202,9 +228,8 @@ async function runOps() {
   rows.push(row(3, '금지', 'GET /api/my/notes (엉터리 토큰)', '401 JSON', await observe('/api/my/notes', { headers: { authorization: FAKE_TOKEN } }), refusedJson));
   rows.push(row(4, '금지', 'GET /api/my/notes?userId=…&role=instructor', '쿼리 신원 무시, 401', await observe(`/api/my/notes?userId=${TEST_UUID}&role=instructor`), refusedJson));
   rows.push(row(4, '금지', 'GET /api/notes/:id (토큰 없음, 남의 메모)', '401 JSON', await observe(`/api/notes/${TEST_UUID}`), refusedJson));
-  rows.push(row(5, '금지', '공개 키로 원본 /rest/v1/notes', '권한 오류, 메모 없음',
-    await observe(`${SUPABASE_URL}/rest/v1/notes?select=id&limit=1`, { headers: { apikey: SUPABASE_PUBLISHABLE_KEY, authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}` } }),
-    (r) => !(r.status === 200 && Array.isArray(r.json) && r.json.length > 0), SRC.db));
+  rows.push(row(5, '금지', '배포 주소로 원본 /rest/v1/notes 직접 읽기', '메모 없음(401·404)',
+    await observe('/rest/v1/notes?select=id&limit=1'), (r) => [401, 403, 404].includes(r.status) && !r.leaked, SRC.db));
   rows.push(row(8, '금지', 'GET /api/notices (토큰 없음)', '401 JSON', await observe('/api/notices'), refusedJson));
   rows.push(row(10, '금지', 'POST /api/restore/:id (토큰 없음)', '401 JSON', await observe(`/api/restore/${TEST_UUID}`, { method: 'POST', body: { confirm: true } }), refusedJson));
   rows.push(row(11, '금지', 'PUT /api/notes/:id (서명·승인 없음)', '401 JSON', await observe(`/api/notes/${TEST_UUID}`, { method: 'PUT', headers: { authorization: FAKE_TOKEN }, body: { title: 'x' } }), refusedJson));
@@ -222,8 +247,7 @@ async function runOps() {
   }
 
   // 정상 요청: 로그인하고 이 기기가 승인된 경우에만 실제로 보냅니다. 아니면 미실행입니다.
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
+  const token = await currentToken();
   if (!token) {
     rows.push(skipped(11, '정상', 'GET /api/device/status (로그인)', 'approved=true', '로그인 후 실행', SRC.device));
     rows.push(skipped(3, '정상', 'GET /api/my/notes (로그인·승인 기기)', '200, 내 메모만', '로그인·기기 승인 후 실행'));
@@ -284,5 +308,4 @@ loadServerRecord().catch(() => { $('ops-meta').textContent = '서버 점검 기�
 // 설치형 웹앱: 서비스 워커는 오프라인 안내 화면만 저장합니다(메모·API 응답은 저장하지 않음).
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 
-supabase.auth.onAuthStateChange((_event, session) => { render(session); });
-render((await supabase.auth.getSession()).data.session);
+render(null);

@@ -13,7 +13,7 @@ BYTE BACK 방어전 1~12단계에서 학생이 만든 가상 자료실입니다.
 
 | 출처 | 들어 있는 것 |
 |---|---|
-| 학생이 만든 것 | 판정기(`src/decider.mjs`), 탐지 규칙(`src/detect.mjs`), 접속 앱 화면(`public/`), 자료실 서버 함수(`api/`), 점검 코드(`src/attack-check.mjs`, `src/rule-check.mjs`), 정책 사본 도구(`scripts/policy.mjs`), DB 설정(`supabase/*.sql`), XDR 판정(`xdr/*/decide.mjs`) |
+| 학생이 만든 것 | 판정기(`src/decider.mjs`), 탐지 규칙(`src/detect.mjs`), 접속 앱 화면(`public/`), 자료실 서버 함수(`api/`, 로그인·가입·갱신도 `api/auth/*`가 대신 보내 화면 코드에는 Supabase 주소·공개 키가 없음), 점검 코드(`src/attack-check.mjs`, `src/rule-check.mjs`), 정책 사본 도구(`scripts/policy.mjs`), DB 설정(`supabase/*.sql`), XDR 판정(`xdr/*/decide.mjs`) |
 | 제공 엔진 | ALEPH SDP 엔진. 요청마다 신원·기기 등록·재로그인을 확인한 뒤 학생 판정기를 부르고 결과를 집행합니다. 학생 탐지 규칙의 회수 제안 집행, 요청 서명 확인, 엔진 감사 기록 보관도 엔진이 맡습니다. 이 저장소에는 엔진 코드가 없습니다. |
 
 제공 엔진: ALEPH SDP 엔진 사용(이 저장소에 없음). 비밀값(서버 전용 키 등)은 저장소와 이 안내에 넣지 않고 Vercel 비밀 입력란에만 둡니다.

@@ -6,6 +6,7 @@ import { createNoticesApi, createNotesApi } from './notes-api.mjs';
 import { createRestoreApi } from './restore-api.mjs';
 import { createDeviceApi, createDeviceCheck } from './device-api.mjs';
 import { createLoginVerifier } from './verify-login.mjs';
+import { createAuthApi, DEFAULT_PUBLISHABLE_KEY } from './auth-api.mjs';
 
 let cached;
 
@@ -50,4 +51,16 @@ export function getDeviceApi(env = process.env) {
 export function notFoundConfig(response) {
   response.setHeader('Cache-Control', 'no-store');
   response.status(500).json({ error: 'SERVER_NOT_CONFIGURED' });
+}
+
+let cachedAuth;
+// 5단계 가점: 로그인 주소는 aleph.config.json의 로그인 발급자(issuer)에서 얻습니다. 공개 키는 서버에만 둡니다.
+export function getAuthApi(env = process.env) {
+  if (!cachedAuth) {
+    cachedAuth = createAuthApi({
+      authUrl: config.identityProvider.issuer,
+      publishableKey: env.SUPABASE_PUBLISHABLE_KEY || DEFAULT_PUBLISHABLE_KEY,
+    });
+  }
+  return cachedAuth;
 }
