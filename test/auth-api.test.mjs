@@ -86,3 +86,17 @@ test('5단계 가점: 화면 코드(public/)에는 Supabase 주소·공개 키·
   const csp = vercel.headers[0].headers.find((h) => h.key === 'Content-Security-Policy').value;
   assert.match(csp, /script-src 'self'; connect-src 'self';/u);
 });
+
+test('5단계 가점: 로그인 함수는 하나로 합쳐 네 동작만 받고 Vercel 함수 개수 제한(12개) 안에 든다', async () => {
+  const { default: handler } = await import('../api/auth/[action].js');
+  for (const action of ['constructor', '__proto__', 'LOGIN', 'x']) {
+    const out = await call((req, res) => handler({ ...req, query: { action } }, res), { body: {} });
+    assert.equal(out.status, 404, action);
+  }
+  const out = await call((req, res) => handler({ ...req, query: { action: 'login' } }, res), { method: 'GET' });
+  assert.equal(out.status, 405);
+  const { readdir } = await import('node:fs/promises');
+  const count = async (dir) => (await readdir(dir, { withFileTypes: true }))
+    .reduce(async (sum, e) => (await sum) + (e.isDirectory() ? await count(new URL(`${e.name}/`, dir)) : e.name.endsWith('.js') ? 1 : 0), 0);
+  assert.ok(await count(new URL('api/', root)) <= 12);
+});
