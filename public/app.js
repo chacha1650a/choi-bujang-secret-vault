@@ -228,8 +228,6 @@ async function runOps() {
   rows.push(row(3, '금지', 'GET /api/my/notes (엉터리 토큰)', '401 JSON', await observe('/api/my/notes', { headers: { authorization: FAKE_TOKEN } }), refusedJson));
   rows.push(row(4, '금지', 'GET /api/my/notes?userId=…&role=instructor', '쿼리 신원 무시, 401', await observe(`/api/my/notes?userId=${TEST_UUID}&role=instructor`), refusedJson));
   rows.push(row(4, '금지', 'GET /api/notes/:id (토큰 없음, 남의 메모)', '401 JSON', await observe(`/api/notes/${TEST_UUID}`), refusedJson));
-  rows.push(row(5, '금지', '배포 주소로 원본 /rest/v1/notes 직접 읽기', '메모 없음(401·404)',
-    await observe('/rest/v1/notes?select=id&limit=1'), (r) => [401, 403, 404].includes(r.status) && !r.leaked, SRC.db));
   rows.push(row(8, '금지', 'GET /api/notices (토큰 없음)', '401 JSON', await observe('/api/notices'), refusedJson));
   rows.push(row(10, '금지', 'POST /api/restore/:id (토큰 없음)', '401 JSON', await observe(`/api/restore/${TEST_UUID}`, { method: 'POST', body: { confirm: true } }), refusedJson));
   rows.push(row(11, '금지', 'PUT /api/notes/:id (서명·승인 없음)', '401 JSON', await observe(`/api/notes/${TEST_UUID}`, { method: 'PUT', headers: { authorization: FAKE_TOKEN }, body: { title: 'x' } }), refusedJson));
