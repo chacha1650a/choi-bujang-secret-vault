@@ -80,7 +80,7 @@ test('5단계 가점: 화면 코드(public/)에는 Supabase 주소·공개 키·
   assert.ok(names.includes('app.js'));
   for (const name of names) {
     const text = await readFile(join(dir.pathname.replace(/^\/([A-Za-z]:)/u, '$1'), name), 'utf8');
-    assert.doesNotMatch(text, /sb_publishable|sb_secret|supabase\.co|supabase-js|createClient|jsdelivr|/rest/v1/iu, name);
+    assert.doesNotMatch(text, /sb_publishable|sb_secret|supabase\.co|supabase-js|createClient|jsdelivr|rest\/v1/iu, name);
   }
   const vercel = JSON.parse(await readFile(new URL('vercel.json', root), 'utf8'));
   const csp = vercel.headers[0].headers.find((h) => h.key === 'Content-Security-Policy').value;
