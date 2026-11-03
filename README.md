@@ -76,6 +76,10 @@ BYTE BACK 방어전 1~12단계에서 학생이 만든 가상 자료실입니다.
 
 미실행 2건은 쓰기 요청이라 제출 묶음 규칙(GET·HEAD만)에 따라 보내지 않은 것입니다. 같은 배포의 서버 점검 기록도 점검 항목 20 · 막은 공격 18 · 뚫린 공격 0 · 실행하지 않은 점검 2입니다. 측정한 커밋 이후로는 문서와 XDR 모듈만 바꿨습니다.
 
+## 4차 케셰브 (13~22단계)
+
+`on-client/`는 직원 본인 범위의 보안 앱 케셰브입니다. 학생은 `on-client/student/extension.mjs`의 화면 함수 8개를 만들었고, 서버·화면 틀·실행 도구는 제공 시작 틀 0.2.21입니다. Windows 11, Node.js 24.19.0, 외부 npm 의존성 없음. 실행·구성도·확인 결과·장애 안내는 [on-client/docs/STUDENT_RUNBOOK.md](on-client/docs/STUDENT_RUNBOOK.md)에 있습니다.
+
 ## XDR 보너스 (xdr-01~06)
 
 `xdr/<모듈>/decide.mjs`는 `patterns.json`(MITRE ATT&CK 근거가 붙은 패턴)을 맨 위 상수로 옮겨 적고, 경보가 패턴과 맞는 정도와 Wazuh 수준으로 확신도를 매겨 block(0.85 이상)·alert(0.5 이상)·record를 돌려줍니다. import는 없습니다. `respond.mjs`는 block만 출발 주소 거부 규칙(만료 시각·근거 경보 번호)으로 넣고 알림을 `xdr/alerts.log`에 쌓습니다. 판정기의 기존 규칙은 고치지 않습니다. 실행: `npm run xdr:run -- <모듈>`, 시험: `npm run test:xdr`. 자세한 설명은 [xdr/README.md](xdr/README.md)에 있습니다.
