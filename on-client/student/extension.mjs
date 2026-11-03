@@ -137,7 +137,176 @@ function buildDecision(input) {
   return root;
 }
 
+const KIND_LABELS = { access: '접속', xdr: 'XDR 경보' };
+const ACCESS_LABELS = { allowed: '허용됨', denied: '거부됨', unknown: '확인 불가' };
+const FILTERS = [
+  { key: 'kind', name: '기록 종류', pick: (event) => event?.kind, show: (value) => `${KIND_LABELS[value] ?? '확인 불가'}(${value})` },
+  { key: 'appId', name: '업무 앱', pick: (event) => event?.appId, show: (value) => value },
+  { key: 'access', name: '접속 상태', pick: (event) => event?.state?.access, show: (value) => `${ACCESS_LABELS[value] ?? '확인 불가'}(${value})` },
+];
+
+// 한국어 설명과 원래 값을 함께 적습니다. 목록에 없는 값은 확인 불가로 둡니다.
+const coded = (labels, value) => {
+  const raw = text(value);
+  if (!raw) return '확인 불가(unknown)';
+  return Object.hasOwn(labels, raw) ? `${labels[raw]}(${raw})` : `확인 불가(unknown) · 받은 값: ${raw}`;
+};
+
+const KST = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', dateStyle: 'medium', timeStyle: 'medium' });
+function eventTime(at) {
+  const raw = text(at);
+  if (!raw) return '시각 확인 불가';
+  const ms = Date.parse(raw);
+  return Number.isFinite(ms) ? `${KST.format(new Date(ms))} (한국 시각) · ${raw}` : `시각 확인 불가 · 받은 값: ${raw}`;
+}
+
+// 원본 배열은 그대로 두고 복사본을 at 최신순으로 정렬합니다. 시각을 읽을 수 없는 기록은 맨 뒤에 둡니다.
+function sortEvents(list) {
+  const time = (event) => { const ms = Date.parse(event?.at); return Number.isFinite(ms) ? ms : -Infinity; };
+  return [...list].sort((a, b) => time(b) - time(a));
+}
+
+function pairList(title, items) {
+  const box = node('div', null, 'event-detail-part');
+  box.append(node('h5', title));
+  if (!Array.isArray(items) || items.length === 0) {
+    box.append(node('p', `${title}: 서버가 보낸 항목이 없습니다.`));
+    return box;
+  }
+  const list = node('ul');
+  for (const item of items) list.append(node('li', `${text(item?.id) ?? 'ID 없음'}: ${text(item?.text) ?? '내용 없음'}`));
+  box.append(list);
+  return box;
+}
+
+function eventDetail(event) {
+  const id = String(event.id);
+  const box = node('section', null, 'event-detail');
+  box.dataset.studentEventDetail = id;
+  box.setAttribute('aria-label', `${id} 상세`);
+  box.append(node('h4', `${id} 상세`));
+  const facts = node('dl');
+  decisionField(facts, '사건 ID', id);
+  decisionField(facts, '앱 ID(appId)', text(event.appId) ?? '앱을 확인할 수 없습니다(appId 없음)');
+  decisionField(facts, '접속 상태(state.access)', coded(ACCESS_LABELS, event.state?.access));
+  decisionField(facts, '세션 상태(state.session)', coded(SESSION_LABELS, event.state?.session));
+  decisionField(facts, '기기 상태(state.device)', coded(DEVICE_LABELS, event.state?.device));
+  box.append(facts, pairList('근거(evidence)', event.evidence), pairList('규칙(rules)', event.rules));
+  // supportedActions 가 비어 있으면 조치 버튼을 만들지 않습니다. 실제 조치 버튼은 이 단계에서 만들지 않습니다.
+  return box;
+}
+
+function createEventsView() {
+  const filters = { kind: 'all', appId: 'all', access: 'all' };
+
+  function render(input) {
+    const { status, mode, data, error } = input ?? {};
+    // 새 자료마다 이전 목록과 상세를 버리고 새 요소를 만듭니다.
+    const root = node('div', null, 'events-view');
+    root.dataset.status = typeof status === 'string' ? status : 'unknown';
+    const note = typeof mode === 'string' ? modeNote(mode) : null;
+    if (note) root.append(note);
+    if (status === 'loading') {
+      root.append(node('p', '기록을 불러오는 중'));
+      return root;
+    }
+    if (status === 'error') {
+      const mismatch = error?.code === 'CONTRACT_MISMATCH';
+      root.append(node('p', `${mismatch ? '기록을 확인할 수 없습니다(확인 불가)' : '기록을 불러오지 못했습니다'}: ${text(error?.message) ?? '확인 불가'}`, 'events-error'));
+      root.append(node('p', '이전 목록은 지웠습니다. 기록이 없다는 뜻이 아닙니다. 다시 불러오기를 눌러 주세요.'));
+      return root;
+    }
+    if (status !== 'ok' || !Array.isArray(data)) {
+      root.append(node('p', '기록을 확인할 수 없습니다(확인 불가).', 'events-error'));
+      return root;
+    }
+    root.append(node('p', '내 최근 기록(최대 40건)입니다. 전체 직원 기록이나 실시간 전체 탐지가 아닙니다. XDR 경보는 서버에 저장된 것만 보입니다.'));
+    if (data.length === 0) {
+      root.append(node('p', '표시할 기록이 없습니다. 조회는 성공했고 해당 기록이 0건입니다.', 'events-empty'));
+      return root;
+    }
+
+    const sorted = sortEvents(data);
+    const controls = node('div', null, 'events-filters');
+    const count = node('p', null, 'events-count');
+    const list = node('ul', null, 'events-list');
+    const detail = node('div', null, 'events-detail-slot');
+    let selected = null;
+
+    const visible = () => sorted.filter((event) => FILTERS.every((f) => filters[f.key] === 'all' || f.pick(event) === filters[f.key]));
+
+    function drawDetail() {
+      detail.replaceChildren();
+      const event = selected === null ? null : visible().find((item) => String(item?.id) === selected);
+      if (event) detail.append(eventDetail(event));
+      else detail.append(node('p', '상세 버튼을 누르면 근거·규칙·세 상태가 여기에 보입니다.'));
+    }
+
+    function drawList() {
+      const rows = visible();
+      count.textContent = `표시 ${rows.length}건 / 받은 기록 ${sorted.length}건`;
+      list.replaceChildren();
+      if (rows.length === 0) list.append(node('li', '선택한 필터에 맞는 기록이 없습니다.'));
+      for (const event of rows) {
+        const id = String(event?.id ?? '');
+        const row = node('li', null, 'event-row');
+        row.dataset.studentEventId = id;
+        row.append(
+          node('p', `사건 ID: ${id || 'ID 없음'}`),
+          node('p', `시각: ${eventTime(event?.at)}`),
+          node('p', `종류: ${coded(KIND_LABELS, event?.kind)}`),
+          node('p', `앱: ${text(event?.appId) ?? '앱을 확인할 수 없습니다(appId 없음)'}`),
+          node('p', `요약: ${text(event?.summary) ?? '요약 없음'}`),
+        );
+        const button = node('button', `${id} 상세`);
+        button.type = 'button';
+        button.setAttribute('aria-label', `${id} 상세`);
+        button.setAttribute('aria-pressed', String(selected === id));
+        button.addEventListener('click', () => { selected = id; drawList(); drawDetail(); });
+        row.append(button);
+        list.append(row);
+      }
+    }
+
+    for (const filter of FILTERS) {
+      const values = [...new Set(sorted.map(filter.pick).filter((value) => typeof value === 'string' && value !== ''))].sort();
+      // 새 자료에 없는 값으로 걸러져 있으면 전체로 되돌립니다.
+      if (filters[filter.key] !== 'all' && !values.includes(filters[filter.key])) filters[filter.key] = 'all';
+      const id = `student-events-filter-${filter.key}`;
+      const labelEl = node('label', filter.name);
+      labelEl.htmlFor = id;
+      const select = node('select');
+      select.id = id;
+      select.setAttribute('aria-label', filter.name);
+      const all = node('option', '전체');
+      all.value = 'all';
+      select.append(all);
+      for (const value of values) {
+        const option = node('option', filter.show(value));
+        option.value = value;
+        select.append(option);
+      }
+      select.value = filters[filter.key];
+      select.addEventListener('change', () => {
+        filters[filter.key] = select.value;
+        drawList();
+        drawDetail();
+      });
+      controls.append(labelEl, select);
+    }
+
+    drawList();
+    drawDetail();
+    root.append(controls, count, list, detail);
+    return root;
+  }
+
+  return { render };
+}
+
 export function createStudentView() {
+  // 필터 선택은 이 화면 안에서만 기억하고, 상세 선택은 새 자료가 올 때마다 지웁니다.
+  const events = createEventsView();
   return {
     // 13단계: 로그인 사용자·기기·세션을 상태별로 보여 줍니다. 입력은 { me, devices, sessions } 이고 각각 { status, mode, data?, error? } 입니다.
     // 다시 불러오면 제공 UI가 새 입력으로 이 함수를 다시 부르고, 이전 DOM은 새 요소로 통째로 바뀝니다. 이전 값은 보관하지 않습니다.
@@ -145,7 +314,8 @@ export function createStudentView() {
     // 14단계: 선택한 업무 앱 한 개의 접근 판정·이유·시각을 보여 줍니다. 입력은 { status, mode, data?, error?, appId } 입니다.
     // 요청 실패(error)는 거부 판정과, 확인 불가(unknown)는 허용과 섞이지 않게 글자로 구분합니다.
     renderDecision(input) { return buildDecision(input); },
-    renderEvents() { return '학생 구현 대기: 본인 접속·XDR 기록을 연결하세요.'; },
+    // 15단계: 본인 접속 기록·저장된 XDR 경보 목록, 필터 세 개, 상세 보기. 입력은 { status, mode, data?, error? } 입니다.
+    renderEvents: events.render,
     renderStatus() { return '학생 구현 대기: 기기·세션·알림과 연결 점검 상태를 구분하세요.'; },
     renderVulnerabilities() { return '학생 구현 대기: 정확한 설치 버전·OSV 출처·조회 시각·부분 결과·조회 실패를 구분하세요.'; },
     renderAiConnection() { return '학생 구현 대기: 모델 응답 점검과 실제 사건 설명을 구분하고 AI 오류·취소·수동 복구를 안내하세요.'; },
