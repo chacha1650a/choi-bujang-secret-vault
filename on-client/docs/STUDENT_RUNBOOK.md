@@ -16,6 +16,7 @@
 | 근거·규칙·확인 불가 상태와 이어진 AI 사건 설명 | 보안 기록 | `renderExplanation` | 17~18 |
 | 조치 제안·사람 확인·서버 접수(ACK)·효과 관측 구분 | 보안 기록 | `renderAction` | 19 |
 | 설치 패키지의 정확한 버전과 OSV 조회 결과 | 보호 현황 | `renderVulnerabilities` | 20 |
+| 내 PC 보안 대시보드(CPU·메모리·디스크·방화벽 카드, 네트워크·Windows 기록 건수, 조회 기록) | 보호 현황의 학생 상태 칸 맨 위 | `createPcDashboard` (`renderStatus` 에 붙임) | 총공세 |
 
 ## 2. 지원 환경과 버전
 
@@ -40,12 +41,16 @@ choi-bujang-secret-vault/          ← Git 최상위(커밋·제출 기준)
 └─ on-client/                      ← 케셰브 앱 폴더(PowerShell 을 여는 곳)
    ├─ package.json                 ← 제공: start / demo / check 명령
    ├─ .env.example                 ← 제공: 비밀 없는 설정 예시(ON_PORT=5189 등)
-   ├─ student/extension.mjs        ← 학생 작성: 화면 함수 8개
+   ├─ student/extension.mjs        ← 학생 작성: 화면 함수 8개와 내 PC 보안 대시보드
+   ├─ student/appearance.json      ← 학생 작성: 앱 이름·카드 배치(student-first)
    ├─ student/engine-adapter.mjs   ← 제공 그대로(고치지 않음)
    ├─ public/                      ← 제공: 화면 틀(index.html, app.js 등)
    ├─ src/server.mjs               ← 제공: 로컬 앱 서버(127.0.0.1)
    ├─ tools/start-alekov.ps1       ← 제공: 실행 도구
-   └─ docs/STUDENT_RUNBOOK.md      ← 학생 작성: 이 문서
+   ├─ docs/STUDENT_RUNBOOK.md      ← 학생 작성: 이 문서
+   ├─ docs/STUDENT_QUICKSTART.md   ← 학생 작성: 처음 보는 사람용 한 장 안내
+   ├─ docs/STUDENT_RELEASE.md      ← 학생 작성: 22단계 재현 기록
+   └─ docs/STUDENT_DEMO.md         ← 학생 작성: 시연 순서와 한계
 ```
 
 ## 4. 실행·종료·다시 실행
@@ -90,7 +95,7 @@ flowchart LR
      │                              ├──> [AI 게이트웨이(CLCO)]
      │                              └──> [OSV 공개 취약점 정보]
      └─ 제공 화면 app.js 가 서버 응답을 검사한 뒤 학생 함수(student/extension.mjs)에 넘김
-        학생 함수는 DOM 요소만 돌려주고 서버에 직접 요청하지 않음
+        학생 함수는 DOM 요소를 돌려줌. 서버 조회는 대시보드의 「다시 조회」가 제공 통로 api.get('/api/pc/status') 로 읽는 것 하나뿐
 ```
 
 | 서버 경로 | 쓰는 화면 |
@@ -102,12 +107,14 @@ flowchart LR
 | `/api/ai/check`, `/api/ai/explain` | 17·18단계 AI 연결·설명 |
 | `/api/actions/prepare`, `/api/actions/execute`, `/api/actions/result` | 19단계 조치(제공 화면 버튼만) |
 | `/api/vulnerabilities` | 20단계 설치 패키지 조회 |
+| `/api/pc/status` | 제공 카드 「내 PC 상태」, 학생 대시보드 「다시 조회」(읽기 전용) |
 
 ## 6. 제공 부분과 학생 작성 부분
 
 | 구분 | 파일 | 하는 일 |
 |---|---|---|
-| 학생 작성 | `student/extension.mjs` | 8개 화면 함수. `createElement`·`textContent` 만 쓰고, 버튼은 15단계 상세·필터, 16단계 「도움정보 복사」, 미지원 조치 비활성 버튼만 만듭니다. 서버에 요청하지 않습니다. |
+| 학생 작성 | `student/extension.mjs` | 8개 화면 함수와 내 PC 보안 대시보드. `createElement`·`textContent` 만 쓰고, 버튼은 15단계 상세·필터, 16단계 「도움정보 복사」, 미지원 조치 비활성 버튼, 대시보드 「다시 조회」만 만듭니다. 서버 조회는 「다시 조회」를 누를 때 제공 통로 `api.get('/api/pc/status')` 로 읽는 것뿐이고, 값을 재는 코드는 제공 서버(`src/pc-status.mjs`)입니다. |
+| 학생 작성 | `student/appearance.json` | 앱 이름과 카드 배치만 정합니다. |
 | 학생 작성 | `docs/STUDENT_RUNBOOK.md`, 최상위 `README.md` 의 4차 부분 | 이 설명서와 요약 |
 | 제공 | `public/app.js`, `public/*.mjs`, `public/index.html` | 메뉴, 서버 요청, 응답 형식 검사, 다시 불러오기·취소·조치 버튼 |
 | 제공 | `src/`, `tools/`, `vendor/` | 로컬 앱 서버, 엔진·AI·OSV 연결, 실행 도구 |
@@ -125,6 +132,7 @@ flowchart LR
 | 18 근거 ID 대조, 근거 불일치·executed 거부, 확인 불가 상태 | 모의 입력 + 예제 실행의 실제 실패(ON_AI_PROVISIONING_PENDING) | 확인. 실제 AI 설명 성공은 미확인 |
 | 19 상태별 문구, effectApplied 없으면 결과 불명, 영수증·사건 불일치 거부 | 모의 입력 | 확인. 실제 조치 집행은 미확인(지원 조치 없음) |
 | 20 정확한 버전, 범위 값 거부, 일부 실패 시 받은 ID 유지 | 모의 입력 + 예제 실행(not_configured) | 확인. 실제 OSV 조회는 미확인 |
+| 대시보드 실측값 표시, 「다시 조회」 2회 기록 쌓임, 다시 불러오기 뒤 기록 유지, 서버를 끈 조회 실패 | 실제 화면(이 PC의 실측값, 1400px) | 확인. 권한 없음·시간 초과 분기는 코드만 읽음 |
 | `tools/start-alekov.ps1` 로 실제 모드 실행 | 실행하지 않음 | 미확인 |
 
 ## 8. 문제가 생겼을 때
@@ -140,6 +148,9 @@ flowchart LR
 | 「결과 불명(unknown)」(조치) | 효과 관측(`effectApplied:true`)이 없음 | 조치 칸의 영수증 ID | 「연동 시스템 결과만 재조회」. 같은 조치를 다시 보내지 않음 |
 | 「조회 준비 미완료(not_configured)」(패키지) | 조회 대상 프로젝트가 설정되지 않음 | 패키지 칸 | 담당자가 준비. 취약점 없음이 아님 |
 | `포트 5189 를 다른 프로그램이 쓰고 있습니다` | 다른 앱이 포트 사용 | 실행 도구 메시지 | ` -Port 5190` 으로 실행 |
+| 대시보드 「조회 실패: … · 코드: NETWORK_ERROR」 | 앱 서버가 꺼짐 | 카드가 사라지고 지난 기록만 남는지 | 앱을 켠 뒤 「다시 조회」를 직접 누름 |
+| 대시보드 「코드: PC_STATUS_STALE」 또는 `PC_STATUS_UNVERIFIED` | 측정 시각이 1분 넘게 지났거나 응답 형식이 다름 | PC 시계와 시작 틀 버전 | 시계를 확인하고 「다시 조회」. 계속되면 도움정보를 강사에게 전달 |
+| 카드 「상태: 주의」 Windows 방화벽 | Private·Public 등 프로필이 꺼져 있음 | Windows 보안의 방화벽 화면 | 앱은 바꾸지 않음. 다른 보안 프로그램이 맡는지 사용자가 직접 확인 |
 
 오류 코드 전체는 제공 문서 `docs/CONNECTION_TROUBLESHOOT.md` 에 있습니다.
 
